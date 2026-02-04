@@ -32,7 +32,7 @@ export default function CardPreview({ card, loading }) {
 
   return (
     <div style={{ padding: 16, border: "1px solid #eee", borderRadius: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <h3 style={{ margin: 0 }}>
           {card.name} ({card.code})
         </h3>
@@ -58,7 +58,50 @@ export default function CardPreview({ card, loading }) {
             RTL
           </span>
         )}
+        {card.source?.verified && (
+          <span
+            style={{
+              fontSize: 12,
+              padding: "2px 8px",
+              borderRadius: 999,
+              background: "#d4edda",
+              border: "1px solid #28a745",
+              color: "#155724",
+            }}
+          >
+            ✓ Verified
+          </span>
+        )}
       </div>
+
+      {/* Source Attribution */}
+      {card.source && (
+        <div
+          style={{
+            marginTop: 10,
+            padding: "8px 12px",
+            background: "#f8f9fa",
+            borderRadius: 8,
+            fontSize: 13,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>Source: </span>
+          <span style={{ textTransform: "capitalize" }}>{card.source.type}</span>
+          {card.source.origin && card.source.origin !== "unknown" && (
+            <span> — {card.source.origin}</span>
+          )}
+          {card.source.url && (
+            <a
+              href={card.source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ marginLeft: 8, color: "#007bff" }}
+            >
+              View Source ↗
+            </a>
+          )}
+        </div>
+      )}
 
       <div style={{ marginTop: 12 }}>
         <div style={{ fontWeight: 700, marginBottom: 6 }}>Front (raw JSON)</div>
