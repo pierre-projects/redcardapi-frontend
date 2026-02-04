@@ -30,17 +30,13 @@ This repository contains **only the frontend UI**.
 redcard-frontend/
 ├── public/
 ├── src/
-│ ├── assets/ # Static assets
-│ ├── components/ # UI components
-│ ├── hooks/ # Custom hooks (API interaction)
-│ │ ├── useLanguages.js
-│ │ └── useCard.js
-│ ├── api.js # Centralized API helpers
-│ ├── App.jsx # Root component
-│ ├── main.jsx # React entry point
-│ └── index.css
-├── .env.example # Example environment variables
-├── .gitignore
+│   ├── assets/
+│   ├── components/
+│   ├── hooks/
+│   ├── api.js
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
 ├── index.html
 ├── package.json
 ├── package-lock.json
