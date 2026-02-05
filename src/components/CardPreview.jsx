@@ -1,4 +1,37 @@
+import { useState } from "react";
 import LoadingSpinner from "./LoadingSpinner";
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      style={{
+        padding: "4px 10px",
+        fontSize: 12,
+        borderRadius: 6,
+        background: copied ? "var(--success-color)" : "var(--bg-secondary)",
+        color: copied ? "#fff" : "var(--color-text)",
+        border: "1px solid var(--border-color)",
+        cursor: "pointer",
+        transition: "all 0.2s",
+      }}
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
 
 export default function CardPreview({ card, loading }) {
   // Loading state
@@ -7,12 +40,12 @@ export default function CardPreview({ card, loading }) {
       <div
         style={{
           padding: 16,
-          border: "1px solid #eee",
+          border: "1px solid var(--border-color)",
           borderRadius: 12,
           display: "flex",
           alignItems: "center",
           gap: 10,
-          color: "#666",
+          color: "var(--color-text-muted)",
         }}
       >
         <LoadingSpinner size={18} />
@@ -24,14 +57,23 @@ export default function CardPreview({ card, loading }) {
   // Empty state
   if (!card) {
     return (
-      <div style={{ padding: 16, border: "1px solid #eee", borderRadius: 12 }}>
+      <div
+        style={{
+          padding: 16,
+          border: "1px solid var(--border-color)",
+          borderRadius: 12,
+          color: "var(--color-text-muted)",
+        }}
+      >
         Select a language to preview the payload.
       </div>
     );
   }
 
+  const jsonString = JSON.stringify(card.front, null, 2);
+
   return (
-    <div style={{ padding: 16, border: "1px solid #eee", borderRadius: 12 }}>
+    <div style={{ padding: 16, border: "1px solid var(--border-color)", borderRadius: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <h3 style={{ margin: 0 }}>
           {card.name} ({card.code})
@@ -41,7 +83,7 @@ export default function CardPreview({ card, loading }) {
             fontSize: 12,
             padding: "2px 8px",
             borderRadius: 999,
-            border: "1px solid #ccc",
+            border: "1px solid var(--border-color)",
           }}
         >
           {card.official ? "Official" : "Unofficial"}
@@ -52,7 +94,7 @@ export default function CardPreview({ card, loading }) {
               fontSize: 12,
               padding: "2px 8px",
               borderRadius: 999,
-              border: "1px solid #ccc",
+              border: "1px solid var(--border-color)",
             }}
           >
             RTL
@@ -64,12 +106,12 @@ export default function CardPreview({ card, loading }) {
               fontSize: 12,
               padding: "2px 8px",
               borderRadius: 999,
-              background: "#d4edda",
-              border: "1px solid #28a745",
-              color: "#155724",
+              background: "var(--success-color)",
+              border: "1px solid var(--success-color)",
+              color: "#fff",
             }}
           >
-            ✓ Verified
+            Verified
           </span>
         )}
       </div>
@@ -80,7 +122,7 @@ export default function CardPreview({ card, loading }) {
           style={{
             marginTop: 10,
             padding: "8px 12px",
-            background: "#f8f9fa",
+            background: "var(--bg-tertiary)",
             borderRadius: 8,
             fontSize: 13,
           }}
@@ -95,27 +137,37 @@ export default function CardPreview({ card, loading }) {
               href={card.source.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ marginLeft: 8, color: "#007bff" }}
+              style={{ marginLeft: 8 }}
             >
-              View Source ↗
+              View Source
             </a>
           )}
         </div>
       )}
 
       <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>Front (raw JSON)</div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>Front (raw JSON)</span>
+          <CopyButton text={jsonString} />
+        </div>
         <pre
           style={{
-            background: "#0b0b0b",
-            color: "#eee",
+            background: "var(--bg-tertiary)",
             padding: 12,
             borderRadius: 10,
             overflow: "auto",
             fontSize: 13,
+            margin: 0,
           }}
         >
-          {JSON.stringify(card.front, null, 2)}
+          {jsonString}
         </pre>
       </div>
     </div>

@@ -23,13 +23,6 @@ export default function LayoutPicker({ value, onChange, validLayouts }) {
         id="layout-picker"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={{
-          padding: "8px 12px",
-          borderRadius: 6,
-          border: "1px solid #ccc",
-          fontSize: 14,
-          cursor: "pointer",
-        }}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

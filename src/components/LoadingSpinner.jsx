@@ -1,14 +1,16 @@
 /**
  * Simple loading spinner component.
  */
-export default function LoadingSpinner({ size = 20, color = "#666" }) {
+export default function LoadingSpinner({ size = 20, color }) {
+  const spinnerColor = color || "var(--color-text-muted)";
+
   return (
     <span
       style={{
         display: "inline-block",
         width: size,
         height: size,
-        border: `2px solid ${color}`,
+        border: `2px solid ${spinnerColor}`,
         borderTopColor: "transparent",
         borderRadius: "50%",
         animation: "spin 0.8s linear infinite",
@@ -38,7 +40,7 @@ export function LoadingMessage({ message = "Loading..." }) {
         alignItems: "center",
         gap: 10,
         padding: 16,
-        color: "#666",
+        color: "var(--color-text-muted)",
       }}
     >
       <LoadingSpinner />

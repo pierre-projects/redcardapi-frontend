@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguages } from "./hooks/useLanguages";
 import { useCard } from "./hooks/useCard";
 import LanguagePicker from "./components/LanguagePicker";
@@ -6,7 +6,10 @@ import LayoutPicker from "./components/LayoutPicker";
 import CardPreview from "./components/CardPreview";
 import PdfDownloadButton from "./components/PdfDownloadButton";
 import FontWarning from "./components/FontWarning";
+import ThemeToggle from "./components/ThemeToggle";
 import { LoadingMessage } from "./components/LoadingSpinner";
+
+const LANGUAGE_STORAGE_KEY = "selected-language";
 
 export default function App() {
   // Fetch languages and config
@@ -18,9 +21,18 @@ export default function App() {
     retry: retryLanguages,
   } = useLanguages();
 
-  // Selected language and layout
-  const [selected, setSelected] = useState("");
+  // Selected language and layout (restore from localStorage)
+  const [selected, setSelected] = useState(() => {
+    return localStorage.getItem(LANGUAGE_STORAGE_KEY) || "";
+  });
   const [cardsPerPage, setCardsPerPage] = useState(4);
+
+  // Persist language selection to localStorage
+  useEffect(() => {
+    if (selected) {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, selected);
+    }
+  }, [selected]);
 
   // Fetch card when language selected
   const { card, loading: cardLoading, error: cardError } = useCard(selected);
@@ -47,8 +59,18 @@ export default function App() {
         fontFamily: "system-ui",
       }}
     >
-      <h1 style={{ marginBottom: 6 }}>Know Your Rights Auto Language Cards</h1>
-      <div style={{ opacity: 0.75, marginBottom: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: 6,
+        }}
+      >
+        <h1 style={{ margin: 0 }}>Know Your Rights Auto Language Cards</h1>
+        <ThemeToggle />
+      </div>
+      <div style={{ color: "var(--color-text-muted)", marginBottom: 20 }}>
         Official translations from <code>Translations.json</code> + server-side
         PDF render.
       </div>
@@ -59,8 +81,8 @@ export default function App() {
           style={{
             padding: 12,
             borderRadius: 10,
-            background: "#ffe5e5",
-            border: "1px solid #ffb3b3",
+            background: "var(--error-bg)",
+            border: "1px solid var(--error-border)",
             marginBottom: 16,
             display: "flex",
             justifyContent: "space-between",
@@ -69,18 +91,7 @@ export default function App() {
         >
           <span>{error}</span>
           {langsError && (
-            <button
-              onClick={retryLanguages}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid #cc8888",
-                background: "#fff",
-                cursor: "pointer",
-              }}
-            >
-              Retry
-            </button>
+            <button onClick={retryLanguages}>Retry</button>
           )}
         </div>
       )}
