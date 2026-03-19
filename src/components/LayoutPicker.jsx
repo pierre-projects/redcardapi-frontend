@@ -1,4 +1,4 @@
-const LAYOUT_OPTIONS = [
+const DEFAULT_LAYOUT_OPTIONS = [
   { value: 4, label: "4 cards (2x2)", description: "Standard layout" },
   { value: 6, label: "6 cards (2x3)", description: "More cards, smaller text" },
   { value: 8, label: "8 cards (2x4)", description: "Compact layout" },
@@ -8,11 +8,19 @@ const LAYOUT_OPTIONS = [
 /**
  * Layout picker component for selecting cards per page.
  */
-export default function LayoutPicker({ value, onChange, validLayouts }) {
-  // Filter options based on valid layouts from API config
-  const options = validLayouts
-    ? LAYOUT_OPTIONS.filter((opt) => validLayouts.includes(opt.value))
-    : LAYOUT_OPTIONS;
+export default function LayoutPicker({
+  value,
+  onChange,
+  validLayouts,
+  options,
+}) {
+  const baseOptions = Array.isArray(options) && options.length > 0
+    ? options
+    : DEFAULT_LAYOUT_OPTIONS;
+
+  const resolvedOptions = validLayouts
+    ? baseOptions.filter((opt) => validLayouts.includes(opt.value))
+    : baseOptions;
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -24,7 +32,7 @@ export default function LayoutPicker({ value, onChange, validLayouts }) {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >
-        {options.map((opt) => (
+        {resolvedOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
