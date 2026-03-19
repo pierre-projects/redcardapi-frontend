@@ -2,6 +2,10 @@
 
 RedCard Frontend is a React application for publishing, previewing, and printing Know Your Rights red cards across multiple languages. The app now uses a route split between a landing page (`/`), an operational red-card workspace (`/redcards`), language deep links (`/redcards/:code`), and a translation builder (`/builder`).
 
+## Related Repository
+
+- Backend API: [redcardapi](https://github.com/pierre-projects/redcardapi)
+
 ## Who This README Is For
 
 - End users/operators: run the app, pick languages, print cards, and troubleshoot runtime issues.
