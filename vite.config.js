@@ -7,8 +7,9 @@ import { VitePWA } from 'vite-plugin-pwa'
  * to localhost would ship a site whose PDF downloads can never work.
  * Set ALLOW_MISSING_API_BASE=1 to build a cards-only site without PDFs.
  */
-function requireApiBase(mode, env) {
-  if (mode !== 'production' || env.VITE_API_BASE || process.env.ALLOW_MISSING_API_BASE) return
+function requireApiBase(command, mode, env) {
+  if (command !== 'build' || mode !== 'production') return
+  if (env.VITE_API_BASE || process.env.ALLOW_MISSING_API_BASE) return
   throw new Error(
     'VITE_API_BASE is not set. Set it to the backend URL (see .env.example), ' +
       'or set ALLOW_MISSING_API_BASE=1 to build without PDF downloads.'
@@ -51,9 +52,9 @@ function contentSecurityPolicy(apiBase) {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  requireApiBase(mode, env)
+  requireApiBase(command, mode, env)
 
   return {
     plugins: [
