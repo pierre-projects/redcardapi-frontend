@@ -247,6 +247,12 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
             </>
           )}
         </p>
+        {card.source && !card.source.verified && (
+          <p>
+            Not yet reviewed by a native speaker.
+            {card.source.review_note ? ` ${card.source.review_note}` : ""}
+          </p>
+        )}
         <p>
           <button type="button" className="link-button" onClick={onPrint}>
             Print paper cards in {card.name}

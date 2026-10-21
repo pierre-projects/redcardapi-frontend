@@ -86,6 +86,14 @@ describe("card view", () => {
 });
 
 describe("print workspace", () => {
+  it("warns before printing a translation that needs native review", () => {
+    renderAt("/redcards/km");
+    expect(screen.getByRole("note")).toHaveTextContent(/Not yet reviewed by a native speaker/);
+    cleanup();
+    renderAt("/redcards/es");
+    expect(screen.queryByText(/Not yet reviewed/)).toBeNull();
+  });
+
   it("shows the card preview and a non-blocking notice when the PDF API is down", async () => {
     vi.useFakeTimers();
     renderAt("/redcards/ht");

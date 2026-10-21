@@ -34,6 +34,15 @@ export default function CardPreview({ card, back, onShowCard }) {
         )}
       </div>
 
+      {card.source && !card.source.verified && (
+        <div className="notice" role="note">
+          <span>
+            <strong>Not yet reviewed by a native speaker.</strong>{" "}
+            {card.source.review_note || "Check the text before printing many copies."}
+          </span>
+        </div>
+      )}
+
       <div className="preview-card-stage">
         <div className={`preview-card-viewport ${isBack ? "is-back" : ""}`}>
           <button
