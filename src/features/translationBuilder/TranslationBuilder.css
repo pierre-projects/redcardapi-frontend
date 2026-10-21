@@ -225,7 +225,8 @@
   min-width: 0;
 }
 
-.translation-builder input,
+/* Text fields only: radios and color pickers (e.g. the shared Ink options) keep their own size. */
+.translation-builder input:not([type="radio"], [type="checkbox"], [type="color"]),
 .translation-builder textarea {
   width: 100%;
   min-width: 0;
