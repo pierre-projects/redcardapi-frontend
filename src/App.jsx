@@ -4,6 +4,7 @@ import LanguagePicker from "./components/LanguagePicker";
 import LayoutPicker from "./components/LayoutPicker";
 import CardPreview from "./components/CardPreview";
 import PdfDownloadButton from "./components/PdfDownloadButton";
+import { PDF_API_ENABLED } from "./api";
 import PrintColorPicker from "./components/PrintColorPicker";
 import FontWarning from "./components/FontWarning";
 import ThemeToggle from "./components/ThemeToggle";
@@ -152,7 +153,9 @@ export default function App() {
 
   const [selected, setSelected] = useState(getStoredLanguage);
   const [storedCardsPerPage, setStoredCardsPerPage] = useState(getStoredLayout);
-  const [printMethod, setPrintMethod] = useState(getStoredPrintMethod);
+  const [storedPrintMethod, setPrintMethod] = useState(getStoredPrintMethod);
+  // Cards-only builds have no PDF API, so the browser is the only way to print.
+  const printMethod = PDF_API_ENABLED ? storedPrintMethod : "browser";
   const [printStyle, setPrintStyle] = useState(getStoredPrintStyle);
   const [printColor, setPrintColor] = useState(getStoredPrintColor);
   const [builderCardsPerPage, setBuilderCardsPerPage] = useState(BROWSER_LAYOUT_OPTIONS[0].value);
@@ -537,7 +540,9 @@ export default function App() {
             <div className="page-head">
               <h1>Print paper cards</h1>
               <p>
-                Choose a language and layout, then download a PDF or print from this browser.
+                {PDF_API_ENABLED
+                  ? "Choose a language and layout, then download a PDF or print from this browser."
+                  : "Choose a language and layout, then print from this browser."}{" "}
                 Cut along the dotted lines and fold each card down the middle.
               </p>
             </div>
@@ -568,35 +573,37 @@ export default function App() {
                   options={activeLayoutOptions}
                 />
 
-                <fieldset className="field">
-                  <legend className="field-label">Output</legend>
-                  <label className="choice">
-                    <input
-                      type="radio"
-                      name="print-method"
-                      value="backend"
-                      checked={printMethod === "backend"}
-                      onChange={() => setPrintMethod("backend")}
-                    />
-                    <span>
-                      <strong>PDF file</strong>
-                      <span className="choice-hint">Same result on any printer. Fronts and backs side by side for folding.</span>
-                    </span>
-                  </label>
-                  <label className="choice">
-                    <input
-                      type="radio"
-                      name="print-method"
-                      value="browser"
-                      checked={printMethod === "browser"}
-                      onChange={() => setPrintMethod("browser")}
-                    />
-                    <span>
-                      <strong>Print from browser</strong>
-                      <span className="choice-hint">Works for every language, even when PDF download is unavailable.</span>
-                    </span>
-                  </label>
-                </fieldset>
+                {PDF_API_ENABLED && (
+                  <fieldset className="field">
+                    <legend className="field-label">Output</legend>
+                    <label className="choice">
+                      <input
+                        type="radio"
+                        name="print-method"
+                        value="backend"
+                        checked={printMethod === "backend"}
+                        onChange={() => setPrintMethod("backend")}
+                      />
+                      <span>
+                        <strong>PDF file</strong>
+                        <span className="choice-hint">Same result on any printer. Fronts and backs side by side for folding.</span>
+                      </span>
+                    </label>
+                    <label className="choice">
+                      <input
+                        type="radio"
+                        name="print-method"
+                        value="browser"
+                        checked={printMethod === "browser"}
+                        onChange={() => setPrintMethod("browser")}
+                      />
+                      <span>
+                        <strong>Print from browser</strong>
+                        <span className="choice-hint">Works for every language, even when PDF download is unavailable.</span>
+                      </span>
+                    </label>
+                  </fieldset>
+                )}
 
                 <PrintColorPicker
                   style={printStyle}

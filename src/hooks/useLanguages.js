@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { fetchLanguages, fetchConfig } from "../api";
+import { PDF_API_ENABLED, fetchLanguages, fetchConfig } from "../api";
 import { LANGUAGES } from "../data/cards";
 import { normalizeLanguageCode } from "../data/normalize";
 
@@ -9,16 +9,17 @@ import { normalizeLanguageCode } from "../data/normalize";
  * fonts for, plus its print config. If the backend is down, cards still work
  * and only backend PDF download is unavailable.
  *
- * pdfStatus: "loading" | "ready" | "unavailable"
+ * pdfStatus: "loading" | "ready" | "unavailable" | "disabled" (cards-only build)
  */
 export function useLanguages() {
   const [fontSupport, setFontSupport] = useState(null);
   const [config, setConfig] = useState(null);
-  const [pdfStatus, setPdfStatus] = useState("loading");
+  const [pdfStatus, setPdfStatus] = useState(PDF_API_ENABLED ? "loading" : "disabled");
   const [pdfError, setPdfError] = useState(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    if (!PDF_API_ENABLED) return undefined;
     const controller = new AbortController();
 
     Promise.all([

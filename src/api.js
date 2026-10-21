@@ -1,6 +1,10 @@
-// Production builds fail in vite.config.js when VITE_API_BASE is missing, so
-// this fallback only ever applies to local development.
+// Production builds fail in vite.config.js when VITE_API_BASE is missing,
+// unless ALLOW_MISSING_API_BASE builds a cards-only site; the localhost
+// fallback only applies to local development.
 const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/\/+$/, "");
+
+/** False for a cards-only build: no PDF API, so browser printing is the only output. */
+export const PDF_API_ENABLED = Boolean(import.meta.env.VITE_API_BASE) || import.meta.env.DEV;
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const RETRY_DELAYS_MS = [600, 1800];
