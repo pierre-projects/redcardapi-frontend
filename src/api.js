@@ -159,40 +159,23 @@ export async function fetchConfig(signal) {
 }
 
 /**
- * Get PDF download URL with layout option and render mode.
+ * Get PDF download URL for a layout and render mode.
  * @param {string} code - Language code
- * @param {object|number} options - { cardsPerPage, mode } or cardsPerPage number
+ * @param {{cardsPerPage?: number, mode?: "grid"|"fold"}} options
  */
-export function pdfUrl(code, options = {}) {
-  const cardsPerPage = typeof options === "number"
-    ? options
-    : options?.cardsPerPage ?? 4;
-  const mode = typeof options === "number"
-    ? "legacy"
-    : options?.mode ?? "legacy";
-
-  const base = `${API_BASE}/api/render/${encodeURIComponent(code)}`;
-  const query = new URLSearchParams();
-
-  if (cardsPerPage) {
-    query.set("cards_per_page", String(cardsPerPage));
-  }
-  if (mode) {
-    query.set("mode", mode);
-  }
-
-  const queryString = query.toString();
-  return queryString ? `${base}?${queryString}` : base;
+export function pdfUrl(code, { cardsPerPage = 4, mode = "grid" } = {}) {
+  const query = new URLSearchParams({ cards_per_page: String(cardsPerPage), mode });
+  return `${API_BASE}/api/render/${encodeURIComponent(code)}?${query}`;
 }
 
 /**
  * Download PDF as blob (for better error handling).
  * @param {string} code - Language code
  * @param {number} cardsPerPage - Cards per page
- * @param {string} mode - Render mode ("legacy" or "fold")
+ * @param {string} mode - Render mode ("grid" or "fold")
  * @param {AbortSignal} signal - Optional abort signal
  */
-export async function downloadPdf(code, cardsPerPage = 4, mode = "legacy", signal) {
+export async function downloadPdf(code, cardsPerPage = 4, mode = "grid", signal) {
   const url = pdfUrl(code, { cardsPerPage, mode });
   // PDF rendering can be slow on a cold server; allow more time per attempt.
   const res = await fetchWithRetry(url, {

@@ -29,9 +29,9 @@ const PAGE_REDCARDS = "redcards";
 const PAGE_BUILDER = "builder";
 const AVAILABLE_CODES = new Set(LANGUAGES.map((language) => language.code));
 
-const BACKEND_LEGACY_FALLBACK_LAYOUTS = [4, 6, 8, 12];
+const BACKEND_GRID_FALLBACK_LAYOUTS = [4, 6, 8, 12];
 const BACKEND_FOLD_FALLBACK_LAYOUTS = [4, 5, 6];
-const BACKEND_LEGACY_LAYOUT_LABELS = {
+const BACKEND_GRID_LAYOUT_LABELS = {
   4: "4 cards (2x2)",
   6: "6 cards (2x3)",
   8: "8 cards (2x4)",
@@ -184,14 +184,14 @@ export default function App() {
 
   const backendRenderMode = useMemo(() => {
     const modes = Array.isArray(config?.render_modes) ? config.render_modes : [];
-    return modes.includes("fold") ? "fold" : "legacy";
+    return modes.includes("fold") ? "fold" : "grid";
   }, [config]);
 
   const backendLayoutOptions = useMemo(() => {
     const isFold = backendRenderMode === "fold";
     const configuredLayouts = isFold ? config?.fold_layouts : config?.valid_layouts;
-    const fallbackLayouts = isFold ? BACKEND_FOLD_FALLBACK_LAYOUTS : BACKEND_LEGACY_FALLBACK_LAYOUTS;
-    const labels = isFold ? BACKEND_FOLD_LAYOUT_LABELS : BACKEND_LEGACY_LAYOUT_LABELS;
+    const fallbackLayouts = isFold ? BACKEND_FOLD_FALLBACK_LAYOUTS : BACKEND_GRID_FALLBACK_LAYOUTS;
+    const labels = isFold ? BACKEND_FOLD_LAYOUT_LABELS : BACKEND_GRID_LAYOUT_LABELS;
 
     const source = Array.isArray(configuredLayouts) && configuredLayouts.length > 0
       ? configuredLayouts
@@ -217,7 +217,7 @@ export default function App() {
     }
     const fallbackLayouts = backendRenderMode === "fold"
       ? BACKEND_FOLD_FALLBACK_LAYOUTS
-      : BACKEND_LEGACY_FALLBACK_LAYOUTS;
+      : BACKEND_GRID_FALLBACK_LAYOUTS;
     return backendLayoutValues[0] ?? fallbackLayouts[0];
   }, [backendRenderMode, config, backendLayoutValues]);
 

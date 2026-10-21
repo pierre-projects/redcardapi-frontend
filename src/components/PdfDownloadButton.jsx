@@ -8,7 +8,7 @@ import LoadingSpinner from "./LoadingSpinner";
 export default function PdfDownloadButton({
   code,
   cardsPerPage = 4,
-  mode = "legacy",
+  mode = "grid",
   disabled,
   disabledReason = "",
 }) {
