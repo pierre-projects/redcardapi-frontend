@@ -1,4 +1,4 @@
-# RedCard Frontend
+# Red Card Frontend
 
 React app that puts a Know Your Rights red card on someone's phone in their own language, quickly and reliably. It also prints paper cards and helps translators build new cards.
 
@@ -8,6 +8,14 @@ Design goals, in priority order:
 2. **Works with no server and no connection.** Card content is bundled into the app and precached by a service worker. The backend API is only used for PDF downloads.
 3. **Usable in the moment.** The full-screen card view has a large "Show to officer" toggle to the English side. It also keeps the screen on, offers bigger text, saves the card as an image, shares a link, and reads aloud where the device has a voice for the language.
 4. **No tracking.** No analytics, no third-party requests (fonts are self-hosted), and a strict Content-Security-Policy. The chosen language is stored only on the device and can be forgotten from the home page.
+
+## Screenshots
+
+Captured from a production build at phone width (390 px) and on desktop. Individual screens are in [`docs/showcase/light`](docs/showcase/light) and [`docs/showcase/dark`](docs/showcase/dark).
+
+![Red Card frontend, light theme](docs/showcase/showcase-light.png)
+
+[Dark theme version](docs/showcase/showcase-dark.png)
 
 ## Related Repository
 
