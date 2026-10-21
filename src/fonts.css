@@ -1,0 +1,32 @@
+/*
+ * Self-hosted Noto fonts for scripts that many phones lack (Ethiopic,
+ * Myanmar/Karen, Khmer, Lao, ...). Each @font-face carries a unicode-range,
+ * so a device downloads a font only when a card actually uses that script,
+ * and nothing is requested from third-party font services.
+ */
+@import "@fontsource/noto-sans-ethiopic/ethiopic-400.css";
+@import "@fontsource/noto-sans-ethiopic/ethiopic-700.css";
+@import "@fontsource/noto-sans-myanmar/myanmar-400.css";
+@import "@fontsource/noto-sans-myanmar/myanmar-700.css";
+@import "@fontsource/noto-sans-khmer/khmer-400.css";
+@import "@fontsource/noto-sans-khmer/khmer-700.css";
+@import "@fontsource/noto-sans-lao/lao-400.css";
+@import "@fontsource/noto-sans-lao/lao-700.css";
+@import "@fontsource/noto-sans-arabic/arabic-400.css";
+@import "@fontsource/noto-sans-arabic/arabic-700.css";
+@import "@fontsource/noto-sans-hebrew/hebrew-400.css";
+@import "@fontsource/noto-sans-hebrew/hebrew-700.css";
+@import "@fontsource/noto-sans-devanagari/devanagari-400.css";
+@import "@fontsource/noto-sans-devanagari/devanagari-700.css";
+@import "@fontsource/noto-sans-gurmukhi/gurmukhi-400.css";
+@import "@fontsource/noto-sans-gurmukhi/gurmukhi-700.css";
+@import "@fontsource/noto-sans-bengali/bengali-400.css";
+@import "@fontsource/noto-sans-bengali/bengali-700.css";
+@import "@fontsource/noto-sans-tamil/tamil-400.css";
+@import "@fontsource/noto-sans-tamil/tamil-700.css";
+@import "@fontsource/noto-sans-thai/thai-400.css";
+@import "@fontsource/noto-sans-thai/thai-700.css";
+@import "@fontsource/noto-sans-armenian/armenian-400.css";
+@import "@fontsource/noto-sans-armenian/armenian-700.css";
+@import "@fontsource/noto-sans-georgian/georgian-400.css";
+@import "@fontsource/noto-sans-georgian/georgian-700.css";

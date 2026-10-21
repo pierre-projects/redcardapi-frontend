@@ -1,4 +1,9 @@
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// Production builds fail in vite.config.js when VITE_API_BASE is missing, so
+// this fallback only ever applies to local development.
+const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/\/+$/, "");
+
+const DEFAULT_TIMEOUT_MS = 10000;
+const RETRY_DELAYS_MS = [600, 1800];
 
 /**
  * Custom error class for API errors with status code.
@@ -44,6 +49,67 @@ async function toApiError(res, fallbackMessage) {
   return new ApiError(res.status, message, data);
 }
 
+function wait(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+      },
+      { once: true }
+    );
+  });
+}
+
+function isRetryable(error) {
+  if (error instanceof ApiError) return error.status === 503 || error.status >= 502;
+  // Network failures and per-attempt timeouts.
+  return error?.name === "TypeError" || error?.name === "TimeoutError";
+}
+
+/**
+ * fetch() with a per-attempt timeout and retries on network errors and
+ * 502/503/504, so a stalled mobile connection never spins forever.
+ * Caller cancellation (signal) aborts immediately without retrying.
+ */
+export async function fetchWithRetry(url, {
+  signal,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  retries = RETRY_DELAYS_MS.length,
+  fallbackMessage = "Request failed",
+} = {}) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    if (attempt > 0) {
+      await wait(RETRY_DELAYS_MS[Math.min(attempt - 1, RETRY_DELAYS_MS.length - 1)], signal);
+    }
+
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const attemptSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+
+    try {
+      const res = await fetch(url, { signal: attemptSignal });
+      if (!res.ok) throw await toApiError(res, fallbackMessage);
+      return res;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      const normalized = timeoutSignal.aborted
+        ? Object.assign(new Error("The server took too long to respond."), { name: "TimeoutError" })
+        : error;
+      lastError = normalized;
+      if (!isRetryable(normalized)) break;
+    }
+  }
+
+  if (lastError?.name === "TypeError") {
+    throw new ApiError(0, "Can't reach the server. Check your connection and try again.");
+  }
+  throw lastError;
+}
+
 function parseFilenameFromContentDisposition(contentDisposition) {
   if (!contentDisposition) return null;
 
@@ -68,30 +134,15 @@ function parseFilenameFromContentDisposition(contentDisposition) {
 }
 
 /**
- * Fetch all available languages.
+ * Fetch PDF-service language metadata (used for per-language font support).
+ * Card content itself is bundled with the app; see src/data/cards.js.
  * @param {AbortSignal} signal - Optional abort signal for cancellation
  */
 export async function fetchLanguages(signal) {
-  const res = await fetch(`${API_BASE}/api/languages`, { signal });
-  if (!res.ok) {
-    throw await toApiError(res, "Failed to load languages");
-  }
-  return res.json();
-}
-
-/**
- * Fetch card content for a specific language.
- * @param {string} code - Language code
- * @param {AbortSignal} signal - Optional abort signal for cancellation
- */
-export async function fetchCard(code, signal) {
-  const res = await fetch(
-    `${API_BASE}/api/card/${encodeURIComponent(code)}`,
-    { signal }
-  );
-  if (!res.ok) {
-    throw await toApiError(res, "Failed to load card");
-  }
+  const res = await fetchWithRetry(`${API_BASE}/api/languages`, {
+    signal,
+    fallbackMessage: "Failed to load languages",
+  });
   return res.json();
 }
 
@@ -100,10 +151,10 @@ export async function fetchCard(code, signal) {
  * @param {AbortSignal} signal - Optional abort signal for cancellation
  */
 export async function fetchConfig(signal) {
-  const res = await fetch(`${API_BASE}/api/config`, { signal });
-  if (!res.ok) {
-    throw await toApiError(res, "Failed to load config");
-  }
+  const res = await fetchWithRetry(`${API_BASE}/api/config`, {
+    signal,
+    fallbackMessage: "Failed to load config",
+  });
   return res.json();
 }
 
@@ -143,11 +194,13 @@ export function pdfUrl(code, options = {}) {
  */
 export async function downloadPdf(code, cardsPerPage = 4, mode = "legacy", signal) {
   const url = pdfUrl(code, { cardsPerPage, mode });
-  const res = await fetch(url, { signal });
-
-  if (!res.ok) {
-    throw await toApiError(res, "Failed to generate PDF");
-  }
+  // PDF rendering can be slow on a cold server; allow more time per attempt.
+  const res = await fetchWithRetry(url, {
+    signal,
+    timeoutMs: 30000,
+    retries: 1,
+    fallbackMessage: "Failed to generate PDF",
+  });
 
   const blob = await res.blob();
   const filename = parseFilenameFromContentDisposition(res.headers.get("content-disposition"));

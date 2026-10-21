@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE: https://api.example.invalid
+      - name: Check prerendered card pages
+        run: |
+          test "$(ls dist/card | wc -l)" -ge 56
+          grep -q 'lang="ar" dir="rtl"' dist/card/ar/index.html
+          grep -q 'class="show-card-header"' dist/card/es/index.html
+          ! grep -rq 'fonts.googleapis' dist/*.html

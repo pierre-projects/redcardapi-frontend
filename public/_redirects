@@ -1,0 +1,3 @@
+# SPA fallback for Netlify / Cloudflare Pages. Existing files (including the
+# prerendered /card/<code>/index.html pages) are served first.
+/*    /index.html   200

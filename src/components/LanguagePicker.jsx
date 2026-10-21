@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { searchLanguages } from "../lib/languageMatch";
 
 export default function LanguagePicker({ languages, value, onChange }) {
   const [search, setSearch] = useState("");
@@ -7,18 +8,12 @@ export default function LanguagePicker({ languages, value, onChange }) {
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const optionRefs = useRef([]);
-  const listboxId = "language-picker-listbox";
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+  const labelId = `${baseId}-label`;
 
-  // Filter languages based on search
-  const filtered = useMemo(() => {
-    if (!search.trim()) return languages;
-    const query = search.toLowerCase();
-    return languages.filter(
-      (l) =>
-        l.name.toLowerCase().includes(query) ||
-        l.code.toLowerCase().includes(query)
-    );
-  }, [languages, search]);
+  // Match English name, native name or code, ignoring accents.
+  const filtered = useMemo(() => searchLanguages(languages, search), [languages, search]);
 
   const safeHighlightedIndex = Math.min(
     highlightedIndex,
@@ -28,7 +23,9 @@ export default function LanguagePicker({ languages, value, onChange }) {
   // Get selected language display name
   const selectedLanguage = languages.find((l) => l.code === value);
   const displayValue = selectedLanguage
-    ? `${selectedLanguage.name} (${selectedLanguage.code})`
+    ? selectedLanguage.native === selectedLanguage.name
+      ? selectedLanguage.name
+      : `${selectedLanguage.native} · ${selectedLanguage.name}`
     : "";
 
   // Handle click outside to close dropdown
@@ -145,13 +142,14 @@ export default function LanguagePicker({ languages, value, onChange }) {
 
   return (
     <div style={{ display: "grid", gap: 8 }} ref={containerRef}>
-      <label style={{ fontWeight: 600 }}>Language</label>
+      <span id={labelId} style={{ fontWeight: 600 }}>Language</span>
       <div style={{ position: "relative" }}>
         <button
           type="button"
           onClick={toggleDropdown}
           onKeyDown={handleTriggerKeyDown}
           aria-haspopup="listbox"
+          aria-labelledby={`${labelId} ${baseId}-value`}
           aria-expanded={isOpen}
           aria-controls={listboxId}
           style={{
@@ -165,8 +163,8 @@ export default function LanguagePicker({ languages, value, onChange }) {
             color: value ? "var(--color-text)" : "var(--color-text-muted)",
           }}
         >
-          {displayValue || "Select a language..."}
-          <span style={{ float: "right" }}>{isOpen ? "^" : "v"}</span>
+          <span id={`${baseId}-value`}>{displayValue || "Select a language..."}</span>
+          <span style={{ float: "right" }} aria-hidden="true">{isOpen ? "▴" : "▾"}</span>
         </button>
 
         {isOpen && (
@@ -197,14 +195,15 @@ export default function LanguagePicker({ languages, value, onChange }) {
                   setHighlightedIndex(0);
                 }}
                 onKeyDown={handleInputKeyDown}
-                placeholder="Search languages..."
+                placeholder="Search in any language..."
+                aria-label="Search languages"
                 role="combobox"
                 aria-controls={listboxId}
                 aria-expanded={isOpen}
                 aria-autocomplete="list"
                 aria-activedescendant={
                   filtered[safeHighlightedIndex]
-                    ? `lang-option-${filtered[safeHighlightedIndex].code}`
+                    ? `${baseId}-option-${filtered[safeHighlightedIndex].code}`
                     : undefined
                 }
                 style={{
@@ -223,6 +222,7 @@ export default function LanguagePicker({ languages, value, onChange }) {
             <div
               id={listboxId}
               role="listbox"
+              aria-labelledby={labelId}
               style={{ overflow: "auto", flex: 1 }}
             >
               {filtered.length === 0 ? (
@@ -237,10 +237,9 @@ export default function LanguagePicker({ languages, value, onChange }) {
                 </div>
               ) : (
                 filtered.map((l, index) => (
-                  <button
+                  <div
                     key={l.code}
-                    id={`lang-option-${l.code}`}
-                    type="button"
+                    id={`${baseId}-option-${l.code}`}
                     onClick={() => handleSelect(l.code)}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     ref={(el) => {
@@ -249,9 +248,8 @@ export default function LanguagePicker({ languages, value, onChange }) {
                     role="option"
                     aria-selected={l.code === value}
                     style={{
-                      width: "100%",
                       padding: "10px 12px",
-                      textAlign: "left",
+                      textAlign: "start",
                       background:
                         index === safeHighlightedIndex
                           ? "var(--bg-tertiary)"
@@ -264,24 +262,20 @@ export default function LanguagePicker({ languages, value, onChange }) {
                       color: "var(--color-text)",
                     }}
                   >
-                    {!l.fontSupported && (
-                      <span title="Font not supported">! </span>
-                    )}
-                    {l.name} ({l.code})
-                    {l.rtl && (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 11,
-                          padding: "1px 6px",
-                          borderRadius: 4,
-                          background: "var(--bg-tertiary)",
-                        }}
-                      >
-                        RTL
+                    <span lang={l.code} dir={l.rtl ? "rtl" : "ltr"} style={{ fontWeight: 600 }}>
+                      {l.native}
+                    </span>
+                    {l.native !== l.name && (
+                      <span style={{ marginInlineStart: 8, color: "var(--color-text-muted)" }}>
+                        {l.name}
                       </span>
                     )}
-                  </button>
+                    {l.fontSupported === false && (
+                      <span style={{ display: "block", fontSize: 12, color: "var(--color-text-muted)" }}>
+                        PDF download unavailable · browser print works
+                      </span>
+                    )}
+                  </div>
                 ))
               )}
             </div>

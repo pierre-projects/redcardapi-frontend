@@ -1,23 +1,16 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>RedCardAPI — Know Your Rights Card Generator</title>
-    <script>
-      // Apply theme immediately to prevent flash
-      (function() {
-        var stored = localStorage.getItem('theme-preference');
-        var theme = (stored === 'light' || stored === 'dark')
-          ? stored
-          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="description" content="Know-your-rights Red Cards in 56 languages. Open your card on your phone, even offline, show the English side to an officer, or print paper cards." />
+    <meta name="theme-color" content="#B91C1C" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>Red Card — Know Your Rights in Your Language</title>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

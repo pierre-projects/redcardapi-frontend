@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
+import { safeGet, safeSet } from "../lib/storage";
 
 const STORAGE_KEY = "theme-preference";
 
 function getInitialTheme() {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = safeGet(STORAGE_KEY);
   if (stored === "light" || stored === "dark") {
     return stored;
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
 }
@@ -18,7 +19,7 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEY, theme);
+    safeSet(STORAGE_KEY, theme);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -27,6 +28,7 @@ export default function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}

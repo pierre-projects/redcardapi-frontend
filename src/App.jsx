@@ -1,38 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguages } from "./hooks/useLanguages";
-import { useCard } from "./hooks/useCard";
 import LanguagePicker from "./components/LanguagePicker";
 import LayoutPicker from "./components/LayoutPicker";
 import CardPreview from "./components/CardPreview";
 import PdfDownloadButton from "./components/PdfDownloadButton";
 import FontWarning from "./components/FontWarning";
 import ThemeToggle from "./components/ThemeToggle";
-import TranslationPayloadBuilder from "./components/TranslationPayloadBuilder";
 import HeroLanding from "./components/HeroLanding";
+import QuickCardAccess from "./components/QuickCardAccess";
+import ShowCard from "./components/ShowCard";
 import { LoadingMessage } from "./components/LoadingSpinner";
+import { BACK_CONTENT, LANGUAGES, getCard } from "./data/cards";
+import { normalizeLanguageCode } from "./data/normalize";
+import { getBrowserLanguageTags, matchLanguageTag, matchPreferredLanguage } from "./lib/languageMatch";
+import { safeGet, safeRemove, safeSet } from "./lib/storage";
 import "./App.css";
+
+// The builder is an authoring tool; keep it out of the bundle card users load.
+const TranslationPayloadBuilder = lazy(() => import("./components/TranslationPayloadBuilder"));
 
 const LANGUAGE_STORAGE_KEY = "selected-language";
 const LAYOUT_STORAGE_KEY = "selected-cards-per-page";
 const PRINT_METHOD_STORAGE_KEY = "selected-print-method";
 const BUILDER_HELP_DISMISSED_KEY = "redcard-builder-help-dismissed";
 const PAGE_HOME = "home";
+const PAGE_CARD = "card";
 const PAGE_REDCARDS = "redcards";
 const PAGE_BUILDER = "builder";
-
-function getBuilderHelpDismissed() {
-  try {
-    return localStorage.getItem(BUILDER_HELP_DISMISSED_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function setBuilderHelpDismissed() {
-  try {
-    localStorage.setItem(BUILDER_HELP_DISMISSED_KEY, "true");
-  } catch {}
-}
+const AVAILABLE_CODES = new Set(LANGUAGES.map((language) => language.code));
 
 const BACKEND_LEGACY_FALLBACK_LAYOUTS = [4, 6, 8, 12];
 const BACKEND_FOLD_FALLBACK_LAYOUTS = [4, 5, 6];
@@ -53,50 +48,20 @@ const BROWSER_LAYOUT_OPTIONS = [
   { value: 12, label: "6 cards (6 front + 6 back)" },
 ];
 
-const DEFAULT_BACK_PARAGRAPHS = [
-  "I do not wish to speak with you, answer your questions, or sign or hand you any documents based on my 5th Amendment rights under the United States Constitution.",
-  "I do not give you permission to enter my home based on my 4th Amendment rights under the United States Constitution unless you have a warrant to enter, signed by a judge or magistrate with my name on it that you slide under the door.",
-  "I do not give you permission to search any of my belongings based on my 4th Amendment rights.",
-  "I choose to exercise my constitutional rights.",
-  "These cards are available to citizens and noncitizens alike.",
-];
-
 function getStoredLayout() {
-  const stored = localStorage.getItem(LAYOUT_STORAGE_KEY);
+  const stored = safeGet(LAYOUT_STORAGE_KEY);
   if (!stored) return null;
   const parsed = Number(stored);
   return Number.isInteger(parsed) ? parsed : null;
 }
 
 function getStoredPrintMethod() {
-  const stored = localStorage.getItem(PRINT_METHOD_STORAGE_KEY);
-  return stored === "browser" ? "browser" : "backend";
+  return safeGet(PRINT_METHOD_STORAGE_KEY) === "browser" ? "browser" : "backend";
 }
 
-function normalizeBullet(item) {
-  if (typeof item === "string") return item.trim();
-  if (item && typeof item === "object" && typeof item.text === "string") {
-    return item.text.trim();
-  }
-  return "";
-}
-
-function normalizeFront(front) {
-  if (!front || typeof front !== "object") {
-    return { header: "", bullets: [] };
-  }
-
-  const header = (front.header || front.title || "").trim();
-  const sourceBullets = Array.isArray(front.bullets)
-    ? front.bullets
-    : Array.isArray(front.points)
-      ? front.points
-      : [];
-
-  return {
-    header,
-    bullets: sourceBullets.map(normalizeBullet).filter(Boolean),
-  };
+function getStoredLanguage() {
+  const stored = safeGet(LANGUAGE_STORAGE_KEY, "");
+  return AVAILABLE_CODES.has(normalizeLanguageCode(stored)) ? normalizeLanguageCode(stored) : "";
 }
 
 function normalizePathname(pathname) {
@@ -104,82 +69,86 @@ function normalizePathname(pathname) {
   return normalized || "/";
 }
 
-function normalizeLanguageCode(code) {
-  return String(code || "").trim().toLowerCase().replace(/_/g, "-");
+function decodeSegment(segment) {
+  try {
+    return decodeURIComponent(segment || "");
+  } catch {
+    return segment || "";
+  }
+}
+
+/**
+ * Route codes accept any reasonable tag ("es-MX", "zh", "zh_TW") and resolve
+ * to a card code; `requestedCode` keeps what was asked for so an unknown
+ * code can be reported.
+ */
+function resolveRouteCode(segment) {
+  const requestedCode = normalizeLanguageCode(decodeSegment(segment));
+  return {
+    requestedCode,
+    routeCode: matchLanguageTag(requestedCode, AVAILABLE_CODES) || "",
+  };
 }
 
 function parseRoute(pathname) {
   const normalizedPath = normalizePathname(pathname);
 
-  if (normalizedPath === "/") {
-    return { page: PAGE_HOME, routeCode: "" };
-  }
-
   if (normalizedPath === "/builder") {
-    return { page: PAGE_BUILDER, routeCode: "" };
+    return { page: PAGE_BUILDER, routeCode: "", requestedCode: "" };
   }
 
   if (normalizedPath === "/redcards") {
-    return { page: PAGE_REDCARDS, routeCode: "" };
+    return { page: PAGE_REDCARDS, routeCode: "", requestedCode: "" };
   }
 
   if (normalizedPath.startsWith("/redcards/")) {
-    const encodedCode = normalizedPath.slice("/redcards/".length);
-    let routeCode = "";
-    try {
-      routeCode = decodeURIComponent(encodedCode || "");
-    } catch {
-      routeCode = encodedCode || "";
-    }
-    return { page: PAGE_REDCARDS, routeCode: normalizeLanguageCode(routeCode) };
+    return { page: PAGE_REDCARDS, ...resolveRouteCode(normalizedPath.slice("/redcards/".length)) };
   }
 
-  return { page: PAGE_HOME, routeCode: "" };
+  if (normalizedPath.startsWith("/card/")) {
+    const resolved = resolveRouteCode(normalizedPath.slice("/card/".length));
+    // Unknown card codes fall back to the home page, which reports them.
+    return resolved.routeCode
+      ? { page: PAGE_CARD, ...resolved }
+      : { page: PAGE_HOME, ...resolved };
+  }
+
+  return { page: PAGE_HOME, routeCode: "", requestedCode: "" };
 }
 
-function getPathForPage(page) {
-  if (page === PAGE_REDCARDS) return "/redcards";
+function getPath(page, code = "") {
+  if (page === PAGE_CARD) return `/card/${code}`;
+  if (page === PAGE_REDCARDS) return code ? `/redcards/${code}` : "/redcards";
   if (page === PAGE_BUILDER) return "/builder";
   return "/";
-}
-
-function getPathForRedcards(code) {
-  const normalizedCode = normalizeLanguageCode(code);
-  return normalizedCode ? `/redcards/${normalizedCode}` : "/redcards";
-}
-
-function findLanguageByCode(languages, code) {
-  const normalizedTarget = normalizeLanguageCode(code);
-  if (!normalizedTarget) return null;
-  return languages.find((language) => normalizeLanguageCode(language.code) === normalizedTarget) || null;
 }
 
 export default function App() {
   const {
     languages,
     config,
-    loading: langsLoading,
-    error: langsError,
-    retry: retryLanguages,
+    pdfStatus,
+    pdfError,
+    retryPdfService,
   } = useLanguages();
 
-  const [selected, setSelected] = useState(() => {
-    return localStorage.getItem(LANGUAGE_STORAGE_KEY) || "";
-  });
+  const [selected, setSelected] = useState(getStoredLanguage);
   const [storedCardsPerPage, setStoredCardsPerPage] = useState(getStoredLayout);
   const [printMethod, setPrintMethod] = useState(getStoredPrintMethod);
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [builderPrintCard, setBuilderPrintCard] = useState(null);
-  const [builderHelpDismissed, setBuilderHelpDismissedState] = useState(getBuilderHelpDismissed);
+  const [builderHelpDismissed, setBuilderHelpDismissedState] = useState(
+    () => safeGet(BUILDER_HELP_DISMISSED_KEY) === "true"
+  );
   const [showBuilderAboutModal, setShowBuilderAboutModal] = useState(false);
+  const modalCloseRef = useRef(null);
 
   const dismissBuilderHelp = () => {
     setBuilderHelpDismissedState(true);
-    setBuilderHelpDismissed();
+    safeSet(BUILDER_HELP_DISMISSED_KEY, "true");
   };
 
-  const page = route.page;
-  const routeCode = route.routeCode;
+  const { page, routeCode, requestedCode } = route;
 
   useEffect(() => {
     const onPopState = () => {
@@ -189,6 +158,29 @@ export default function App() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  // Rewrite alias URLs (/card/es-MX → /card/es) so shared links are canonical.
+  useEffect(() => {
+    if (!routeCode || routeCode === requestedCode) return;
+    if (page === PAGE_CARD || page === PAGE_REDCARDS) {
+      window.history.replaceState({}, "", getPath(page, routeCode));
+    }
+  }, [page, routeCode, requestedCode]);
+
+  // Viewing a card remembers its language for the one-tap button on home.
+  useEffect(() => {
+    if (page === PAGE_CARD && routeCode) safeSet(LANGUAGE_STORAGE_KEY, routeCode);
+  }, [page, routeCode]);
+
+  useEffect(() => {
+    if (!showBuilderAboutModal) return undefined;
+    modalCloseRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setShowBuilderAboutModal(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showBuilderAboutModal]);
 
   const backendRenderMode = useMemo(() => {
     const modes = Array.isArray(config?.render_modes) ? config.render_modes : [];
@@ -251,76 +243,56 @@ export default function App() {
   }, [storedCardsPerPage, activeLayoutValues, defaultLayoutForMethod]);
 
   useEffect(() => {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, String(effectiveCardsPerPage));
+    safeSet(LAYOUT_STORAGE_KEY, String(effectiveCardsPerPage));
   }, [effectiveCardsPerPage]);
 
-  const sorted = useMemo(() => {
-    return [...languages].sort((a, b) => a.name.localeCompare(b.name));
-  }, [languages]);
-
-  const routeLanguage = useMemo(
-    () => findLanguageByCode(languages, routeCode),
-    [languages, routeCode]
-  );
-
-  const selectedLanguageFromStorage = useMemo(
-    () => findLanguageByCode(languages, selected),
-    [languages, selected]
-  );
-
-  const routeHasCode = page === PAGE_REDCARDS && Boolean(routeCode);
-  const invalidRouteCode = routeHasCode && !langsLoading && !routeLanguage;
-
-  const effectiveSelected = useMemo(() => {
-    if (page === PAGE_REDCARDS && routeHasCode) {
-      if (langsLoading) return "";
-      return routeLanguage?.code || "";
-    }
-
-    if (!selected) return "";
-    if (langsLoading) return selected;
-    return selectedLanguageFromStorage?.code || "";
-  }, [langsLoading, page, routeHasCode, routeLanguage, selected, selectedLanguageFromStorage]);
-
   useEffect(() => {
-    if (effectiveSelected) {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, effectiveSelected);
-    } else {
-      localStorage.removeItem(LANGUAGE_STORAGE_KEY);
-    }
-  }, [effectiveSelected]);
-
-  useEffect(() => {
-    localStorage.setItem(PRINT_METHOD_STORAGE_KEY, printMethod);
+    safeSet(PRINT_METHOD_STORAGE_KEY, printMethod);
   }, [printMethod]);
 
-  const { card, loading: cardLoading, error: cardError } = useCard(effectiveSelected);
+  const invalidRouteCode = Boolean(requestedCode) && !routeCode;
 
-  const selectedLanguage = useMemo(() => {
-    return findLanguageByCode(languages, effectiveSelected);
-  }, [effectiveSelected, languages]);
+  const effectiveSelected = routeCode || (page === PAGE_REDCARDS && requestedCode ? "" : selected);
+
+  const card = useMemo(() => getCard(effectiveSelected), [effectiveSelected]);
+
+  const selectedLanguage = useMemo(
+    () => languages.find((language) => language.code === effectiveSelected) || null,
+    [effectiveSelected, languages]
+  );
+
+  // One-tap suggestion on home: remembered language first, then the browser's.
+  const suggestedCode = selected
+    || matchPreferredLanguage(getBrowserLanguageTags(), AVAILABLE_CODES);
+  const suggestedLanguage = suggestedCode ? getCard(suggestedCode) : null;
+
+  const pdfServiceReady = pdfStatus === "ready";
+  const fontSupported = selectedLanguage?.fontSupported !== false;
 
   const backendDownloadDisabled = (
     !effectiveSelected ||
     !selectedLanguage ||
-    !selectedLanguage.fontSupported
+    !pdfServiceReady ||
+    !fontSupported
   );
 
   const backendDisabledReason = !effectiveSelected
     ? "Select a language first"
-    : !selectedLanguage
-      ? "Selected language is no longer available"
-      : !selectedLanguage?.fontSupported
-        ? "This language currently has no font support for PDF rendering"
-        : "";
+    : pdfStatus === "loading"
+      ? "Connecting to the PDF service..."
+      : !pdfServiceReady
+        ? "PDF service is unavailable right now. Browser Print still works."
+        : !fontSupported
+          ? "PDF download is not available for this language yet. Use Browser Print."
+          : "";
 
-  const recommendedMethod = selectedLanguage && !selectedLanguage.fontSupported
+  const recommendedMethod = (pdfStatus === "unavailable" || (selectedLanguage && !fontSupported))
     ? "browser"
     : "backend";
 
   const recommendationMessage = recommendedMethod === "backend"
     ? "Recommended now: Backend PDF for stable, cross-printer output."
-    : "Recommended now: Browser Print because backend PDF font support is limited for this language.";
+    : "Recommended now: Browser Print, which works for every language without the PDF service.";
 
   const methodDescription = printMethod === "backend"
     ? backendRenderMode === "fold"
@@ -329,15 +301,20 @@ export default function App() {
     : "Browser print uses fixed 2-column fold layout (4x2 minimum), closer to official card sheets. Turn off browser headers/footers before printing.";
 
   const pageSizeLabel = (config?.page_size || "letter").toUpperCase();
-  const error = langsError || cardError;
 
-  const redcardsBrowserPrintReady = Boolean(card) && !cardLoading && !cardError;
+  const redcardsBrowserPrintReady = Boolean(card);
   const builderBrowserPrintReady = Boolean(builderPrintCard);
   const browserPrintCard = page === PAGE_BUILDER ? builderPrintCard : card;
-  const normalizedFront = useMemo(
-    () => normalizeFront(browserPrintCard?.front),
-    [browserPrintCard]
-  );
+  const browserPrintFront = useMemo(() => {
+    const front = browserPrintCard?.front || {};
+    return {
+      header: front.header || "",
+      bullets: (front.bullets || [])
+        .map((item) => (typeof item === "string" ? item : item?.text || ""))
+        .map((text) => text.trim())
+        .filter(Boolean),
+    };
+  }, [browserPrintCard]);
   const browserLayout = useMemo(() => {
     if (page === PAGE_BUILDER) {
       return {
@@ -361,6 +338,7 @@ export default function App() {
   );
   const showBuilderBrowserPrintSheet = page === PAGE_BUILDER && builderBrowserPrintReady;
   const showBrowserPrintSheet = showRedcardsBrowserPrintSheet || showBuilderBrowserPrintSheet;
+  const backParagraphs = [...BACK_CONTENT.statements, BACK_CONTENT.footer].filter(Boolean);
 
   const handleBrowserPrint = () => {
     window.print();
@@ -373,36 +351,53 @@ export default function App() {
     .filter(Boolean)
     .join(" ");
 
-  const navigateTo = (nextPage, options = {}) => {
-    const nextPath = nextPage === PAGE_REDCARDS
-      ? getPathForRedcards(options.code)
-      : getPathForPage(nextPage);
+  const navigateTo = (nextPage, code = "") => {
+    const nextPath = getPath(nextPage, code);
 
-    if (normalizePathname(window.location.pathname) === normalizePathname(nextPath)) {
-      setRoute(parseRoute(nextPath));
-      return;
+    if (normalizePathname(window.location.pathname) !== normalizePathname(nextPath)) {
+      window.history.pushState({}, "", nextPath);
     }
-
-    window.history.pushState({}, "", nextPath);
     setRoute(parseRoute(nextPath));
+    window.scrollTo(0, 0);
+  };
+
+  const rememberLanguage = (code) => {
+    setSelected(code);
+    if (code) {
+      safeSet(LANGUAGE_STORAGE_KEY, code);
+    } else {
+      safeRemove(LANGUAGE_STORAGE_KEY);
+    }
+  };
+
+  const openCard = (code) => {
+    rememberLanguage(code);
+    navigateTo(PAGE_CARD, code);
   };
 
   const handleLanguageChange = (nextCode) => {
-    setSelected(nextCode);
-
-    if (page !== PAGE_REDCARDS) return;
-    if (!nextCode) {
-      navigateTo(PAGE_REDCARDS);
-      return;
-    }
-
-    navigateTo(PAGE_REDCARDS, { code: nextCode });
+    rememberLanguage(nextCode);
+    if (page === PAGE_REDCARDS) navigateTo(PAGE_REDCARDS, nextCode);
   };
+
+  if (page === PAGE_CARD && card) {
+    return (
+      <ShowCard
+        card={card}
+        back={BACK_CONTENT}
+        onAllLanguages={() => {
+          rememberLanguage(card.code);
+          navigateTo(PAGE_HOME);
+        }}
+        onPrint={() => navigateTo(PAGE_REDCARDS, card.code)}
+      />
+    );
+  }
 
   return (
     <div className="app-shell">
       <div className="no-print">
-        <div className="app-header">
+        <header className="app-header">
           <h1 className="app-title">
             <span className="app-title-accent">RedCard</span>API
             <span className="app-title-sub">Know Your Rights</span>
@@ -412,20 +407,23 @@ export default function App() {
               <button
                 type="button"
                 className={`page-nav-button ${page === PAGE_HOME ? "is-active" : ""}`}
+                aria-current={page === PAGE_HOME ? "page" : undefined}
                 onClick={() => navigateTo(PAGE_HOME)}
               >
-                Home
+                Cards
               </button>
               <button
                 type="button"
                 className={`page-nav-button ${page === PAGE_REDCARDS ? "is-active" : ""}`}
-                onClick={() => navigateTo(PAGE_REDCARDS)}
+                aria-current={page === PAGE_REDCARDS ? "page" : undefined}
+                onClick={() => navigateTo(PAGE_REDCARDS, selected)}
               >
-                Red Cards
+                Print
               </button>
               <button
                 type="button"
                 className={`page-nav-button ${page === PAGE_BUILDER ? "is-active" : ""}`}
+                aria-current={page === PAGE_BUILDER ? "page" : undefined}
                 onClick={() => navigateTo(PAGE_BUILDER)}
               >
                 Build a Red Card
@@ -433,14 +431,15 @@ export default function App() {
             </nav>
             <ThemeToggle />
           </div>
-        </div>
-        <p className="app-subtitle">
-          {page === PAGE_HOME
-            ? "Know your rights in your language. Print-ready cards for real-world moments."
-            : page === PAGE_REDCARDS
-              ? "One interface, two print engines: browser print for visual preview and backend PDF for consistency."
+        </header>
+
+        {page !== PAGE_HOME && (
+          <p className="app-subtitle">
+            {page === PAGE_REDCARDS
+              ? "Print paper cards: browser print works for every language; backend PDF gives the most consistent output."
               : "Build a Red Card translation payload from named statements without writing JSON by hand."}
-        </p>
+          </p>
+        )}
 
         {page === PAGE_BUILDER && !builderHelpDismissed && (
           <div className="app-builder-help" role="region" aria-label="How to use this builder">
@@ -472,17 +471,25 @@ export default function App() {
               className="app-builder-about-modal"
               role="dialog"
               aria-modal="true"
-              aria-label="Builder usage and future implementation details"
+              aria-labelledby="builder-about-title"
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                // The close button is the only focusable element: keep focus in the dialog.
+                if (e.key === "Tab") {
+                  e.preventDefault();
+                  modalCloseRef.current?.focus();
+                }
+              }}
             >
               <div className="app-builder-about-modal-inner">
                 <div className="app-builder-about-modal-head">
-                  <h3>How To Use This Builder</h3>
+                  <h3 id="builder-about-title">How To Use This Builder</h3>
                   <button
+                    ref={modalCloseRef}
                     type="button"
                     className="app-builder-about-modal-close"
                     onClick={() => setShowBuilderAboutModal(false)}
-                    aria-label="Close modal"
+                    aria-label="Close"
                   >
                     ×
                   </button>
@@ -503,41 +510,53 @@ export default function App() {
         )}
 
         {page === PAGE_HOME && (
-          <div className="animate-in">
+          <main className="animate-in">
+            {invalidRouteCode && (
+              <div className="app-error-banner" role="alert">
+                <span className="app-error-text">
+                  No card for “{requestedCode}”. Choose your language below.
+                </span>
+              </div>
+            )}
+            <QuickCardAccess
+              languages={LANGUAGES}
+              suggested={suggestedLanguage}
+              onOpenCard={openCard}
+              onForget={selected ? () => rememberLanguage("") : null}
+            />
             <HeroLanding
-              onGoRedcards={() => navigateTo(PAGE_REDCARDS)}
+              languageCount={LANGUAGES.length}
+              onGoRedcards={() => navigateTo(PAGE_REDCARDS, selected)}
               onGoBuilder={() => navigateTo(PAGE_BUILDER)}
             />
-          </div>
+          </main>
         )}
 
-        {page === PAGE_REDCARDS && error && (
-          <div className="app-error-banner">
-            <span className="app-error-text">{error}</span>
-            {langsError && (
-              <button onClick={retryLanguages}>Retry</button>
+        {page === PAGE_REDCARDS && (
+          <main>
+            {invalidRouteCode && (
+              <div className="app-error-banner" role="alert">
+                <span className="app-error-text">
+                  Language code “{requestedCode}” is not available. Choose a supported language below.
+                </span>
+                <button type="button" onClick={() => navigateTo(PAGE_REDCARDS)}>
+                  Choose a language
+                </button>
+              </div>
             )}
-          </div>
-        )}
 
-        {page === PAGE_REDCARDS && invalidRouteCode && (
-          <div className="app-error-banner">
-            <span className="app-error-text">
-              Language code `{routeCode}` is not available. Choose a supported language below.
-            </span>
-            <button type="button" onClick={() => navigateTo(PAGE_REDCARDS)}>
-              Choose a language
-            </button>
-          </div>
-        )}
+            {pdfStatus === "unavailable" && (
+              <div className="app-error-banner" role="alert">
+                <span className="app-error-text">
+                  PDF service unavailable ({pdfError}). Cards and Browser Print still work.
+                </span>
+                <button type="button" onClick={retryPdfService}>Retry</button>
+              </div>
+            )}
 
-        {page === PAGE_REDCARDS && langsLoading && <LoadingMessage message="Loading languages..." />}
-
-        {page === PAGE_REDCARDS && !langsLoading && !langsError && (
-          <>
             <div className="app-controls">
               <LanguagePicker
-                languages={sorted}
+                languages={languages}
                 value={effectiveSelected}
                 onChange={handleLanguageChange}
               />
@@ -548,20 +567,20 @@ export default function App() {
               />
             </div>
 
-            <div className="print-meta-row">
-              <aside className="print-panel app-print-panel" aria-label="Print instructions">
-                <h2 className="print-panel-title">Print Instructions</h2>
-                <ul className="print-panel-list">
-                  <li>Paper: {pageSizeLabel}, portrait orientation.</li>
-                  <li>Scale: Actual size (100%), no fit-to-page.</li>
-                  <li>Browser print: Turn OFF headers and footers (removes URL/date and prevents overflow).</li>
-                  <li>Margins: Default or minimum. Avoid oversized custom margins.</li>
-                  <li>Duplex: Print front and back on the same sheet.</li>
-                  <li>If backs are upside down, switch flip edge setting.</li>
-                  <li>Cut dotted borders and fold on dashed guides.</li>
-                </ul>
-              </aside>
+            <div className="preview-wrap animate-in">
+              <CardPreview
+                key={card?.code || "none"}
+                card={card}
+                back={BACK_CONTENT}
+                onShowCard={card ? () => openCard(card.code) : null}
+              />
+            </div>
 
+            {selectedLanguage && pdfServiceReady && !fontSupported && (
+              <FontWarning language={selectedLanguage} />
+            )}
+
+            <div className="print-meta-row">
               <section className="method-panel" aria-label="Print method settings">
                 <label htmlFor="print-method-select" className="method-label">Print method</label>
                 <select
@@ -574,7 +593,6 @@ export default function App() {
                 </select>
                 <div className="method-note">{methodDescription}</div>
                 <div className="method-action-row">
-                  <label className="method-label">Action</label>
                   {printMethod === "browser" ? (
                     <>
                       <button
@@ -599,6 +617,9 @@ export default function App() {
                     />
                   )}
                 </div>
+                {pdfStatus === "loading" && printMethod === "backend" && (
+                  <LoadingMessage message="Connecting to the PDF service..." />
+                )}
                 <div className="method-recommend-row">
                   <span className="method-recommend-text">{recommendationMessage}</span>
                   {printMethod !== recommendedMethod && (
@@ -612,26 +633,33 @@ export default function App() {
                   )}
                 </div>
               </section>
-            </div>
 
-            {selectedLanguage && !selectedLanguage.fontSupported && (
-              <FontWarning language={selectedLanguage} />
-            )}
-
-            <div className="preview-wrap animate-in">
-              <CardPreview card={card} loading={cardLoading} />
+              <details className="print-panel app-print-panel">
+                <summary className="print-panel-title">Print Instructions</summary>
+                <ul className="print-panel-list">
+                  <li>Paper: {pageSizeLabel}, portrait orientation.</li>
+                  <li>Scale: Actual size (100%), no fit-to-page.</li>
+                  <li>Browser print: Turn OFF headers and footers (removes URL/date and prevents overflow).</li>
+                  <li>Margins: Default or minimum. Avoid oversized custom margins.</li>
+                  <li>Duplex: Print front and back on the same sheet.</li>
+                  <li>If backs are upside down, switch flip edge setting.</li>
+                  <li>Cut dotted borders and fold on dashed guides.</li>
+                </ul>
+              </details>
             </div>
-          </>
+          </main>
         )}
 
         {page === PAGE_BUILDER && (
-          <div className="builder-wrap animate-in">
-            <TranslationPayloadBuilder
-              onPrintableCardChange={setBuilderPrintCard}
-              onPrintRequest={handleBrowserPrint}
-              onOpenAboutModal={() => setShowBuilderAboutModal(true)}
-            />
-          </div>
+          <main className="builder-wrap animate-in">
+            <Suspense fallback={<LoadingMessage message="Loading builder..." />}>
+              <TranslationPayloadBuilder
+                onPrintableCardChange={setBuilderPrintCard}
+                onPrintRequest={handleBrowserPrint}
+                onOpenAboutModal={() => setShowBuilderAboutModal(true)}
+              />
+            </Suspense>
+          </main>
         )}
       </div>
 
@@ -640,8 +668,11 @@ export default function App() {
           <p className="app-footer-disclaimer">
             This tool provides general information about constitutional rights. It is not legal advice. Consult an attorney for guidance specific to your situation.
           </p>
+          <p className="app-footer-disclaimer">
+            No tracking. Your chosen language is remembered only on this device.
+          </p>
           <div className="app-footer-links">
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/pierre-projects/redcardapi-frontend" target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
         </div>
       </footer>
@@ -690,9 +721,9 @@ export default function App() {
                     dir={browserPrintDirection}
                     lang={browserPrintCard.code}
                   >
-                    <h2>{normalizedFront.header || "Know your rights:"}</h2>
+                    <h2>{browserPrintFront.header || "Know your rights:"}</h2>
                     <ul>
-                      {normalizedFront.bullets.map((bullet, bulletIdx) => (
+                      {browserPrintFront.bullets.map((bullet, bulletIdx) => (
                         <li key={`f-${rowIdx}-${bulletIdx}`}>{bullet}</li>
                       ))}
                     </ul>
@@ -702,10 +733,10 @@ export default function App() {
                     dir="ltr"
                     lang="en"
                   >
-                    {DEFAULT_BACK_PARAGRAPHS.map((paragraph, paragraphIdx) => (
+                    {backParagraphs.map((paragraph, paragraphIdx) => (
                       <p
                         key={`b-${rowIdx}-${paragraphIdx}`}
-                        className={paragraphIdx === DEFAULT_BACK_PARAGRAPHS.length - 1 ? "is-italic" : ""}
+                        className={paragraphIdx === backParagraphs.length - 1 ? "is-italic" : ""}
                       >
                         {paragraph}
                       </p>
