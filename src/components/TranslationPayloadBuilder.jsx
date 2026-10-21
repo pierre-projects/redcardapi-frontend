@@ -4,6 +4,8 @@ export default function TranslationPayloadBuilder({
   onPrintableCardChange,
   onPrintRequest,
   onOpenAboutModal,
+  printSettings,
+  printColors,
   services,
 }) {
   return (
@@ -11,6 +13,8 @@ export default function TranslationPayloadBuilder({
       onPrintableCardChange={onPrintableCardChange}
       onPrintRequest={onPrintRequest}
       onOpenAboutModal={onOpenAboutModal}
+      printSettings={printSettings}
+      printColors={printColors}
       services={services}
     />
   );

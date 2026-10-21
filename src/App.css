@@ -226,6 +226,74 @@ button.icon-button {
   font-size: var(--text-sm);
 }
 
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.color-swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-swatch:has(input:checked),
+.color-swatch-custom.is-checked {
+  border-color: var(--ink);
+}
+
+.color-swatch:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.color-swatch input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.color-swatch-dot {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+
+.color-swatch-custom input[type="color"] {
+  width: 1.6rem;
+  height: 1.6rem;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  cursor: pointer;
+}
+
+.color-swatch-custom input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-swatch-custom input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.color-swatch-custom.is-checked input[type="color"]::-webkit-color-swatch {
+  opacity: 1;
+}
+
 .disclosure summary,
 .preview-raw summary {
   min-height: var(--control-h);
@@ -673,7 +741,20 @@ button.icon-button {
   font-size: var(--text-md);
 }
 
+/* Back link on one side, Print on the other; status wraps onto its own line. */
+.show-print {
+  margin-inline-start: auto;
+  margin-inline-end: -0.5rem;
+  font-size: var(--text-md);
+}
+
+/* Fullscreen is for showing the card; keep it clean. */
+.show-page.is-fullscreen .show-print {
+  display: none;
+}
+
 .show-status {
+  flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 1rem;

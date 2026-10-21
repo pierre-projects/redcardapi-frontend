@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeDataset } from "../src/data/normalize.js";
+import { getTranslator } from "../src/i18n/messages.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
@@ -27,12 +28,17 @@ const { cards, back } = normalizeDataset(dataset);
 
 function cardMarkup(card) {
   const dir = card.rtl ? "rtl" : "ltr";
+  const t = getTranslator(card.code);
+  const uiDir = t.lang === "ar" ? "rtl" : "ltr";
   const bullets = card.front.bullets.map((text) => `<li>${escapeHtml(text)}</li>`).join("");
   const backParagraphs = back.statements.map((text) => `<p>${escapeHtml(text)}</p>`).join("");
   const footer = back.footer ? `<p class="show-card-footer">${escapeHtml(back.footer)}</p>` : "";
   return [
     `<div class="show-page">`,
-    `<div class="show-topbar"><a class="show-link-button" href="/">← All languages</a></div>`,
+    `<div class="show-topbar" lang="${t.lang}" dir="${uiDir}">`,
+    `<a class="show-link-button" href="/">${uiDir === "rtl" ? "→" : "←"} ${escapeHtml(t("allLanguages"))}</a>`,
+    `<a class="button button-quiet show-print" href="/redcards/${escapeHtml(card.code)}">${escapeHtml(t("print"))}</a>`,
+    `</div>`,
     `<article class="show-card show-card-front" lang="${escapeHtml(card.code)}" dir="${dir}">`,
     `<h1 class="show-card-header">${escapeHtml(card.front.header || card.native)}</h1>`,
     `<ul class="show-card-bullets">${bullets}</ul>`,

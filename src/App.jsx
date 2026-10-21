@@ -4,6 +4,7 @@ import LanguagePicker from "./components/LanguagePicker";
 import LayoutPicker from "./components/LayoutPicker";
 import CardPreview from "./components/CardPreview";
 import PdfDownloadButton from "./components/PdfDownloadButton";
+import PrintColorPicker from "./components/PrintColorPicker";
 import FontWarning from "./components/FontWarning";
 import ThemeToggle from "./components/ThemeToggle";
 import AboutSection from "./components/AboutSection";
@@ -15,6 +16,7 @@ import { BACK_CONTENT, LANGUAGES, getCard } from "./data/cards";
 import { normalizeLanguageCode } from "./data/normalize";
 import { getBrowserLanguageTags, matchLanguageTag, matchPreferredLanguage } from "./lib/languageMatch";
 import { safeGet, safeRemove, safeSet } from "./lib/storage";
+import { DEFAULT_CARD_COLOR, normalizeHex, textColorFor } from "./lib/color";
 import "./App.css";
 import "./print.css";
 
@@ -24,11 +26,18 @@ const TranslationPayloadBuilder = lazy(() => import("./components/TranslationPay
 const LANGUAGE_STORAGE_KEY = "selected-language";
 const LAYOUT_STORAGE_KEY = "selected-cards-per-page";
 const PRINT_METHOD_STORAGE_KEY = "selected-print-method";
+const PRINT_STYLE_STORAGE_KEY = "selected-print-style";
+const PRINT_COLOR_STORAGE_KEY = "selected-print-color";
 const PAGE_HOME = "home";
 const PAGE_CARD = "card";
 const PAGE_REDCARDS = "redcards";
 const PAGE_BUILDER = "builder";
 const AVAILABLE_CODES = new Set(LANGUAGES.map((language) => language.code));
+const PAGE_TITLES = {
+  [PAGE_HOME]: "Red Card — Know Your Rights in Your Language",
+  [PAGE_REDCARDS]: "Print paper cards — Red Card",
+  [PAGE_BUILDER]: "Build a red card — Red Card",
+};
 
 const BACKEND_GRID_FALLBACK_LAYOUTS = [4, 6, 8, 12];
 const BACKEND_FOLD_FALLBACK_LAYOUTS = [4, 5, 6];
@@ -58,6 +67,14 @@ function getStoredLayout() {
 
 function getStoredPrintMethod() {
   return safeGet(PRINT_METHOD_STORAGE_KEY) === "browser" ? "browser" : "backend";
+}
+
+function getStoredPrintStyle() {
+  return safeGet(PRINT_STYLE_STORAGE_KEY) === "color" ? "color" : "stock";
+}
+
+function getStoredPrintColor() {
+  return normalizeHex(safeGet(PRINT_COLOR_STORAGE_KEY)) || DEFAULT_CARD_COLOR;
 }
 
 function getStoredLanguage() {
@@ -136,6 +153,9 @@ export default function App() {
   const [selected, setSelected] = useState(getStoredLanguage);
   const [storedCardsPerPage, setStoredCardsPerPage] = useState(getStoredLayout);
   const [printMethod, setPrintMethod] = useState(getStoredPrintMethod);
+  const [printStyle, setPrintStyle] = useState(getStoredPrintStyle);
+  const [printColor, setPrintColor] = useState(getStoredPrintColor);
+  const [builderCardsPerPage, setBuilderCardsPerPage] = useState(BROWSER_LAYOUT_OPTIONS[0].value);
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [builderPrintCard, setBuilderPrintCard] = useState(null);
   const [showBuilderAboutModal, setShowBuilderAboutModal] = useState(false);
@@ -167,13 +187,41 @@ export default function App() {
 
   useEffect(() => {
     if (!showBuilderAboutModal) return undefined;
+    const opener = document.activeElement;
     modalCloseRef.current?.focus();
     const onKeyDown = (event) => {
       if (event.key === "Escape") setShowBuilderAboutModal(false);
+      // The close button is the only focusable element: keep focus in the dialog.
+      if (event.key === "Tab") {
+        event.preventDefault();
+        modalCloseRef.current?.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      // Return focus to whatever opened the dialog.
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
   }, [showBuilderAboutModal]);
+
+  // The card view sets its own title (in the card's language).
+  useEffect(() => {
+    if (PAGE_TITLES[page]) document.title = PAGE_TITLES[page];
+  }, [page]);
+
+  // After in-app navigation, move focus to the new page's heading so screen
+  // readers announce it (a full page load would do this on its own).
+  const navigatedRef = useRef(false);
+  useEffect(() => {
+    if (!navigatedRef.current) return;
+    navigatedRef.current = false;
+    const heading = document.querySelector("main h1");
+    if (heading) {
+      if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+      heading.focus({ preventScroll: true });
+    }
+  }, [route]);
 
   const backendRenderMode = useMemo(() => {
     const modes = Array.isArray(config?.render_modes) ? config.render_modes : [];
@@ -243,6 +291,20 @@ export default function App() {
     safeSet(PRINT_METHOD_STORAGE_KEY, printMethod);
   }, [printMethod]);
 
+  useEffect(() => {
+    safeSet(PRINT_STYLE_STORAGE_KEY, printStyle);
+  }, [printStyle]);
+
+  useEffect(() => {
+    safeSet(PRINT_COLOR_STORAGE_KEY, printColor);
+  }, [printColor]);
+
+  const isColorPrint = printStyle === "color";
+  const cardColors = useMemo(
+    () => (isColorPrint ? { background: printColor, text: textColorFor(printColor) } : null),
+    [isColorPrint, printColor]
+  );
+
   const invalidRouteCode = Boolean(requestedCode) && !routeCode;
 
   const effectiveSelected = routeCode || (page === PAGE_REDCARDS && requestedCode ? "" : selected);
@@ -298,14 +360,14 @@ export default function App() {
     if (page === PAGE_BUILDER) {
       return {
         columns: 2,
-        rows: 4,
+        rows: builderCardsPerPage / 2,
       };
     }
     return {
       columns: 2,
       rows: Math.max(4, Math.ceil(effectiveCardsPerPage / 2)),
     };
-  }, [effectiveCardsPerPage, page]);
+  }, [builderCardsPerPage, effectiveCardsPerPage, page]);
   const browserPageClass = (config?.page_size || "letter").toLowerCase() === "a4"
     ? "print-sheet-a4"
     : "print-sheet-letter";
@@ -329,6 +391,7 @@ export default function App() {
     if (normalizePathname(window.location.pathname) !== normalizePathname(nextPath)) {
       window.history.pushState({}, "", nextPath);
     }
+    navigatedRef.current = true;
     setRoute(parseRoute(nextPath));
     window.scrollTo(0, 0);
   };
@@ -362,6 +425,7 @@ export default function App() {
           navigateTo(PAGE_HOME);
         }}
         onPrint={() => navigateTo(PAGE_REDCARDS, card.code)}
+        printHref={getPath(PAGE_REDCARDS, card.code)}
       />
     );
   }
@@ -383,6 +447,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link no-print" href="#main">Skip to main content</a>
       <header className="site-header no-print">
         <div className="site-header-inner">
           <a
@@ -407,24 +472,19 @@ export default function App() {
 
       <div className="no-print">
         {page === PAGE_BUILDER && showBuilderAboutModal && (
+          // Clicking the backdrop is a mouse shortcut; Escape and the close button cover keyboards.
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <div
             className="app-builder-about-backdrop"
-            role="presentation"
-            onClick={() => setShowBuilderAboutModal(false)}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowBuilderAboutModal(false);
+            }}
           >
             <div
               className="app-builder-about-modal"
               role="dialog"
               aria-modal="true"
               aria-labelledby="builder-about-title"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                // The close button is the only focusable element: keep focus in the dialog.
-                if (e.key === "Tab") {
-                  e.preventDefault();
-                  modalCloseRef.current?.focus();
-                }
-              }}
             >
               <div className="app-builder-about-modal-head">
                 <h2 id="builder-about-title">How to use the builder</h2>
@@ -453,7 +513,7 @@ export default function App() {
         )}
 
         {page === PAGE_HOME && (
-          <main className="page">
+          <main id="main" className="page" tabIndex={-1}>
             {invalidRouteCode && (
               <div className="notice notice-error" role="alert">
                 No card for “{requestedCode}”. Choose your language below.
@@ -473,7 +533,7 @@ export default function App() {
         )}
 
         {page === PAGE_REDCARDS && (
-          <main className="page">
+          <main id="main" className="page" tabIndex={-1}>
             <div className="page-head">
               <h1>Print paper cards</h1>
               <p>
@@ -538,6 +598,14 @@ export default function App() {
                   </label>
                 </fieldset>
 
+                <PrintColorPicker
+                  style={printStyle}
+                  onStyleChange={setPrintStyle}
+                  color={printColor}
+                  onColorChange={setPrintColor}
+                  presets={config?.color_presets}
+                />
+
                 {selectedLanguage && pdfServiceReady && !fontSupported && (
                   <FontWarning language={selectedLanguage} />
                 )}
@@ -562,6 +630,7 @@ export default function App() {
                     code={effectiveSelected}
                     cardsPerPage={effectiveCardsPerPage}
                     mode={backendRenderMode}
+                    color={isColorPrint ? printColor : null}
                     disabled={backendDownloadDisabled}
                     disabledReason={backendDisabledReason}
                   />
@@ -585,6 +654,7 @@ export default function App() {
                   card={card}
                   back={BACK_CONTENT}
                   onShowCard={card ? () => openCard(card.code) : null}
+                  colors={cardColors}
                 />
               </section>
             </div>
@@ -592,7 +662,7 @@ export default function App() {
         )}
 
         {page === PAGE_BUILDER && (
-          <main className="page">
+          <main id="main" className="page" tabIndex={-1}>
             <div className="page-head">
               <h1>Build a red card</h1>
               <p>
@@ -607,6 +677,23 @@ export default function App() {
                 onPrintableCardChange={setBuilderPrintCard}
                 onPrintRequest={handleBrowserPrint}
                 onOpenAboutModal={() => setShowBuilderAboutModal(true)}
+                printColors={cardColors}
+                printSettings={(
+                  <>
+                    <LayoutPicker
+                      value={builderCardsPerPage}
+                      onChange={setBuilderCardsPerPage}
+                      options={BROWSER_LAYOUT_OPTIONS}
+                    />
+                    <PrintColorPicker
+                      style={printStyle}
+                      onStyleChange={setPrintStyle}
+                      color={printColor}
+                      onColorChange={setPrintColor}
+                      presets={config?.color_presets}
+                    />
+                  </>
+                )}
               />
             </Suspense>
           </main>
@@ -628,9 +715,9 @@ export default function App() {
       </footer>
 
       {showBrowserPrintSheet && browserPrintCard && (
-        <section className="browser-print-preview">
+        <section className="browser-print-preview" aria-labelledby="print-sheet-title">
           <div className="no-print browser-print-preview-head">
-            <h2>Browser Print Sheet Preview</h2>
+            <h2 id="print-sheet-title">Browser Print Sheet Preview</h2>
             <p>
               {page === PAGE_BUILDER
                 ? "This sheet is generated directly from your builder form values."
@@ -640,7 +727,10 @@ export default function App() {
               If page 1 shows only instructions, disable print headers/footers in the print dialog.
             </p>
           </div>
-          <div className={`print-sheet ${browserPageClass}`}>
+          <div
+            className={`print-sheet ${browserPageClass}${cardColors ? " print-sheet--color" : ""}`}
+            style={cardColors ? { "--card-bg": cardColors.background, "--card-fg": cardColors.text } : undefined}
+          >
             <div className="print-sheet-top">
               <div className="print-sheet-top-copy">
                 <p>

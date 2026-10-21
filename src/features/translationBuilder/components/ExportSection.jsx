@@ -1,7 +1,6 @@
 export default function ExportSection({
   isValid,
   copyState,
-  onPrint,
   onCopy,
   onDownload,
   onReset,
@@ -10,14 +9,6 @@ export default function ExportSection({
     <section className="translation-section">
       <h3 className="translation-section-title">Export</h3>
       <div className="translation-export-actions">
-        <button
-          type="button"
-          className="pdf-download-button"
-          onClick={onPrint}
-          disabled={!isValid}
-        >
-          Print From Browser
-        </button>
         <button
           type="button"
           onClick={onCopy}

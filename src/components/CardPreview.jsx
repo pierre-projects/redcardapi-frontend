@@ -5,7 +5,7 @@ import Icon from "./Icon";
  * Flip-card preview for the print workspace. Only the visible face is exposed
  * to assistive technology, and the flip control says which side it shows.
  */
-export default function CardPreview({ card, back, onShowCard }) {
+export default function CardPreview({ card, back, onShowCard, colors = null }) {
   const [side, setSide] = useState("front");
 
   if (!card) {
@@ -18,6 +18,10 @@ export default function CardPreview({ card, back, onShowCard }) {
 
   const isBack = side === "back";
   const direction = card.rtl ? "rtl" : "ltr";
+  // Color prints use one color on both faces; otherwise the usual red front, white back.
+  const faceStyle = colors
+    ? { background: colors.background, color: colors.text, borderColor: "transparent" }
+    : undefined;
 
   return (
     <section className="preview-panel" aria-labelledby="preview-title">
@@ -60,6 +64,7 @@ export default function CardPreview({ card, back, onShowCard }) {
               className="preview-card-face preview-card-front"
               dir={direction}
               lang={card.code}
+              style={faceStyle}
               aria-hidden={isBack}
               inert={isBack ? true : undefined}
             >
@@ -81,6 +86,7 @@ export default function CardPreview({ card, back, onShowCard }) {
               className="preview-card-face preview-card-back"
               dir="ltr"
               lang="en"
+              style={faceStyle}
               aria-hidden={!isBack}
               inert={!isBack ? true : undefined}
             >

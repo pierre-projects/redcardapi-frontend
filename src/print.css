@@ -158,6 +158,15 @@
   line-height: 1;
 }
 
+/* Color print: card color on both faces. Without print-color-adjust,
+   browsers drop backgrounds when printing. */
+.print-sheet--color .print-face-card {
+  background: var(--card-bg);
+  color: var(--card-fg);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .print-face-back p {
   margin: 0 0 0.032in;
   font-size: 7.3pt;
@@ -219,6 +228,10 @@
   body {
     background: #ffffff !important;
     color: #000000 !important;
+  }
+
+  .print-sheet--color .print-face-card {
+    color: var(--card-fg) !important;
   }
 
   .print-sheet {

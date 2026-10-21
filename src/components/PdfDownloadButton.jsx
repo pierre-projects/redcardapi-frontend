@@ -10,6 +10,7 @@ export default function PdfDownloadButton({
   code,
   cardsPerPage = 4,
   mode = "grid",
+  color = null,
   disabled,
   disabledReason = "",
 }) {
@@ -46,7 +47,7 @@ export default function PdfDownloadButton({
     setError(null);
 
     try {
-      const { blob, filename } = await downloadPdf(code, cardsPerPage, mode);
+      const { blob, filename } = await downloadPdf(code, cardsPerPage, mode, undefined, color);
 
       // Create download link
       const url = URL.createObjectURL(blob);

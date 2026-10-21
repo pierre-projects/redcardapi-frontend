@@ -161,10 +161,12 @@ export async function fetchConfig(signal) {
 /**
  * Get PDF download URL for a layout and render mode.
  * @param {string} code - Language code
- * @param {{cardsPerPage?: number, mode?: "grid"|"fold"}} options
+ * @param {{cardsPerPage?: number, mode?: "grid"|"fold", color?: string|null}} options
+ *   color: "#RRGGBB" for a color print; omit for black on white.
  */
-export function pdfUrl(code, { cardsPerPage = 4, mode = "grid" } = {}) {
+export function pdfUrl(code, { cardsPerPage = 4, mode = "grid", color = null } = {}) {
   const query = new URLSearchParams({ cards_per_page: String(cardsPerPage), mode });
+  if (color) query.set("color", color.replace(/^#/, ""));
   return `${API_BASE}/api/render/${encodeURIComponent(code)}?${query}`;
 }
 
@@ -174,9 +176,10 @@ export function pdfUrl(code, { cardsPerPage = 4, mode = "grid" } = {}) {
  * @param {number} cardsPerPage - Cards per page
  * @param {string} mode - Render mode ("grid" or "fold")
  * @param {AbortSignal} signal - Optional abort signal
+ * @param {string|null} color - "#RRGGBB" for a color print
  */
-export async function downloadPdf(code, cardsPerPage = 4, mode = "grid", signal) {
-  const url = pdfUrl(code, { cardsPerPage, mode });
+export async function downloadPdf(code, cardsPerPage = 4, mode = "grid", signal, color = null) {
+  const url = pdfUrl(code, { cardsPerPage, mode, color });
   // PDF rendering can be slow on a cold server; allow more time per attempt.
   const res = await fetchWithRetry(url, {
     signal,
