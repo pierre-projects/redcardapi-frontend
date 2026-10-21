@@ -6,7 +6,7 @@ export default function FontWarning({ language }) {
   if (!language) return null;
 
   return (
-    <div className="font-warning" role="note">
+    <div className="notice" role="note">
       <strong>PDF download isn't available for {language.name} yet.</strong>{" "}
       Use Browser Print instead — it prints this language correctly.
     </div>

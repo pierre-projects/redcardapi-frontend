@@ -36,7 +36,7 @@ describe("home", () => {
 
   it("searches in the language's own script", () => {
     renderAt("/");
-    fireEvent.change(screen.getByLabelText("Search languages"), { target: { value: "العربية" } });
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "العربية" } });
     expect(screen.getByRole("link", { name: /العربية/ })).toHaveAttribute("href", "/card/ar");
   });
 
@@ -94,6 +94,6 @@ describe("print workspace", () => {
       await vi.runAllTimersAsync();
     });
     vi.useRealTimers();
-    expect(screen.getByRole("alert")).toHaveTextContent(/PDF service unavailable/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/PDF downloads are unavailable/);
   });
 });

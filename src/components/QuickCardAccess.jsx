@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { getTranslator } from "../i18n/messages";
 import { searchLanguages } from "../lib/languageMatch";
+import Icon from "./Icon";
 
 /**
  * First thing on the home page: open a card in one tap.
@@ -11,11 +12,7 @@ export default function QuickCardAccess({ languages, suggested, onOpenCard, onFo
   const [query, setQuery] = useState("");
   const results = useMemo(() => searchLanguages(languages, query), [languages, query]);
   const t = getTranslator(suggested?.code);
-  const searchPlaceholder = t.lang === "en"
-    ? "Search languages"
-    : `${t("searchLanguages")} · Search languages`;
-
-  const cardHref = (code) => `/card/${code}`;
+  const translated = t.lang !== "en";
 
   const handleOpen = (event, code) => {
     // Plain left clicks navigate in-app; modified clicks keep link behavior.
@@ -26,59 +23,72 @@ export default function QuickCardAccess({ languages, suggested, onOpenCard, onFo
 
   return (
     <section className="quick-access" aria-labelledby="quick-access-title">
+      <div className="page-head">
+        <h1 id="quick-access-title">Know your rights card</h1>
+        <p>
+          Show this card if immigration agents come to your door or stop you. It is free, private,
+          and works without an internet connection.
+        </p>
+      </div>
+
       {suggested && (
         <div className="quick-suggested">
           <a
             className="quick-suggested-button"
-            href={cardHref(suggested.code)}
+            href={`/card/${suggested.code}`}
             onClick={(event) => handleOpen(event, suggested.code)}
             lang={suggested.code}
             dir={suggested.rtl ? "rtl" : "ltr"}
           >
-            <span className="quick-suggested-native">{suggested.native}</span>
-            <span className="quick-suggested-action" lang={t.lang}>{t("openMyCard")} →</span>
+            <span>
+              <span className="quick-suggested-native">{suggested.native}</span>
+              <span className="quick-suggested-action" lang={t.lang}>{t("openMyCard")}</span>
+            </span>
+            <Icon name={suggested.rtl ? "arrow-left" : "arrow-right"} size={22} />
           </a>
           {onForget && (
-            <button type="button" className="quick-forget" onClick={onForget}>
+            <button type="button" className="link-button quick-forget" onClick={onForget}>
               Forget this language on this device
             </button>
           )}
         </div>
       )}
 
-      <h2 id="quick-access-title" className="quick-title">
-        <span lang={t.lang}>{t("chooseLanguage")}</span>
-        {t.lang !== "en" && <span className="quick-title-en"> · Choose your language</span>}
-      </h2>
-
-      <label className="visually-hidden" htmlFor="quick-search">Search languages</label>
-      <input
-        id="quick-search"
-        className="quick-search"
-        type="search"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={searchPlaceholder}
-        autoComplete="off"
-        spellCheck={false}
-      />
+      <div className="quick-search-row">
+        <label className="field-label" htmlFor="quick-search">
+          {translated ? <span lang={t.lang}>{t("chooseLanguage")} · </span> : null}
+          Choose your language
+        </label>
+        <div className="search-input">
+          <Icon name="search" />
+          <input
+            id="quick-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={translated ? `${t("searchLanguages")} · Search` : "Search in any language"}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+      </div>
 
       {results.length === 0 ? (
         <p className="quick-empty" role="status">No language matches “{query}”.</p>
       ) : (
-        <ul className="quick-grid">
+        <ul className="language-list">
           {results.map((language) => (
             <li key={language.code}>
               <a
-                className="quick-lang"
-                href={cardHref(language.code)}
+                className="language-link"
+                href={`/card/${language.code}`}
                 onClick={(event) => handleOpen(event, language.code)}
               >
-                <span className="quick-lang-native" lang={language.code} dir={language.rtl ? "rtl" : "ltr"}>
+                <span className="language-native" lang={language.code} dir={language.rtl ? "rtl" : "ltr"}>
                   {language.native}
                 </span>
                 {language.native !== language.name && (
-                  <span className="quick-lang-name">{language.name}</span>
+                  <span className="language-name">{language.name}</span>
                 )}
               </a>
             </li>

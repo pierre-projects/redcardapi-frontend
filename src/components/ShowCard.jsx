@@ -5,6 +5,7 @@ import { useSpeech } from "../hooks/useSpeech";
 import { useOfflineReady } from "../hooks/useOfflineReady";
 import { saveCardImage } from "../lib/cardImage";
 import { safeGet, safeSet } from "../lib/storage";
+import Icon from "./Icon";
 
 const TEXT_SCALE_KEY = "card-text-scale";
 const TEXT_SCALES = [0.85, 1, 1.15, 1.3, 1.5, 1.75];
@@ -134,33 +135,30 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
       style={{ "--card-text-scale": TEXT_SCALES[scaleIndex] }}
     >
       <div className="show-topbar" lang={t.lang} dir={uiDir}>
-        <button type="button" className="show-link-button" onClick={onAllLanguages}>
-          <span aria-hidden="true">{uiDir === "rtl" ? "→" : "←"}</span> {t("allLanguages")}
+        <button type="button" className="button-quiet show-back" onClick={onAllLanguages}>
+          <Icon name={uiDir === "rtl" ? "arrow-right" : "arrow-left"} />
+          {t("allLanguages")}
         </button>
-        <div className="show-status" aria-live="polite">
-          {offlineReady && <span className="show-status-pill">✓ {t("offlineReady")}</span>}
-          {screenOn && <span className="show-status-pill">☀ {t("screenOn")}</span>}
-        </div>
+        {(offlineReady || screenOn) && (
+          <p className="show-status" aria-live="polite">
+            {offlineReady && (
+              <span><Icon name="check" size={16} />{t("offlineReady")}</span>
+            )}
+            {screenOn && (
+              <span><Icon name="sun" size={16} />{t("screenOn")}</span>
+            )}
+          </p>
+        )}
       </div>
 
-      <div className="show-toggle" role="group" aria-label={card.native} lang={t.lang} dir={uiDir}>
-        <button
-          type="button"
-          className="show-toggle-button"
-          aria-pressed={!isBack}
-          onClick={() => setSide("front")}
-        >
-          <span className="show-toggle-main">{t("myRights")}</span>
-          <span className="show-toggle-sub" lang={card.code}>{card.native}</span>
+      <div className="segmented" role="group" aria-label={card.native} lang={t.lang} dir={uiDir}>
+        <button type="button" aria-pressed={!isBack} onClick={() => setSide("front")}>
+          <span className="segmented-main">{t("myRights")}</span>
+          <span className="segmented-sub" lang={card.code}>{card.native}</span>
         </button>
-        <button
-          type="button"
-          className="show-toggle-button"
-          aria-pressed={isBack}
-          onClick={() => setSide("back")}
-        >
-          <span className="show-toggle-main">{t("showOfficer")}</span>
-          <span className="show-toggle-sub" lang="en">English</span>
+        <button type="button" aria-pressed={isBack} onClick={() => setSide("back")}>
+          <span className="segmented-main">{t("showOfficer")}</span>
+          <span className="segmented-sub" lang="en">English</span>
         </button>
       </div>
 
@@ -191,63 +189,67 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
         </article>
       )}
 
-      <div className="show-tools" lang={t.lang} dir={uiDir}>
-        <div className="show-tool-group" role="group" aria-label={t("textSize")}>
+      <div className="toolbar" lang={t.lang} dir={uiDir}>
+        <div className="toolbar-group" role="group" aria-label={t("textSize")}>
           <button
             type="button"
-            className="show-tool"
+            className="icon-button"
             onClick={() => changeScale(-1)}
             disabled={scaleIndex === 0}
             aria-label={`${t("textSize")} −`}
           >
-            A−
+            <Icon name="text-smaller" />
           </button>
           <button
             type="button"
-            className="show-tool"
+            className="icon-button"
             onClick={() => changeScale(1)}
             disabled={scaleIndex === TEXT_SCALES.length - 1}
             aria-label={`${t("textSize")} +`}
           >
-            A+
+            <Icon name="text-larger" />
           </button>
         </div>
         {fullscreenSupported && (
-          <button type="button" className="show-tool" onClick={toggleFullscreen}>
+          <button type="button" onClick={toggleFullscreen}>
+            <Icon name={isFullscreen ? "minimize" : "maximize"} />
             {isFullscreen ? t("exitFullScreen") : t("fullScreen")}
           </button>
         )}
-        <button type="button" className="show-tool" onClick={handleSaveImage} disabled={saving}>
+        <button type="button" onClick={handleSaveImage} disabled={saving}>
+          <Icon name="image" />
           {t("saveImage")}
         </button>
-        <button type="button" className="show-tool" onClick={handleShare}>
+        <button type="button" onClick={handleShare}>
+          <Icon name="share" />
           {t("share")}
         </button>
         {speech.canSpeak && (
-          <button type="button" className="show-tool" onClick={handleSpeak} aria-pressed={speech.speaking}>
+          <button type="button" onClick={handleSpeak} aria-pressed={speech.speaking}>
+            <Icon name={speech.speaking ? "stop" : "volume"} />
             {speech.speaking ? t("stop") : t("readAloud")}
           </button>
         )}
       </div>
 
-      {toast && <div className="show-toast" role="status">{toast}</div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
 
-      <details className="show-about">
+      <details className="disclosure show-about">
         <summary>About this translation</summary>
         <p>
           {card.name} ({card.native})
-          {card.source?.origin && card.source.origin !== "unknown" ? ` — ${card.source.origin}` : ""}
-          {card.source?.type ? ` · ${card.source.type}` : ""}
-          {card.source?.verified ? " · verified" : ""}
+          {card.source?.origin && card.source.origin !== "unknown" ? `, from ${card.source.origin}` : ""}
+          {card.source?.verified ? ", verified" : ""}.
+          {card.source?.url && (
+            <>
+              {" "}
+              <a href={card.source.url} target="_blank" rel="noopener noreferrer">Original source</a>
+            </>
+          )}
         </p>
-        {card.source?.url && (
-          <p>
-            <a href={card.source.url} target="_blank" rel="noopener noreferrer">View original source</a>
-          </p>
-        )}
         <p>
-          <button type="button" className="show-link-button" onClick={onPrint}>
-            Print paper cards
+          <button type="button" className="link-button" onClick={onPrint}>
+            Print paper cards in {card.name}
           </button>
         </p>
         <p className="show-disclaimer">

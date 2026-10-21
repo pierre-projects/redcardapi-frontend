@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { downloadPdf } from "../api";
 import LoadingSpinner from "./LoadingSpinner";
+import Icon from "./Icon";
 
 /**
  * PDF download button with loading state and error handling.
@@ -57,46 +58,35 @@ export default function PdfDownloadButton({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (e) {
+      // Stays visible until the next attempt so it can be read.
       setError(getErrorMessage(e));
-      // Clear error after 3 seconds
-      setTimeout(() => setError(null), 3000);
     } finally {
       setLoading(false);
     }
   };
 
   const isDisabled = disabled || loading;
-  const buttonClassName = [
-    "pdf-download-button",
-    disabled ? "is-disabled" : "",
-    loading ? "is-loading" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const reasonId = `pdf-reason-${code || "none"}`;
 
   return (
-    <div className="pdf-download">
+    <div className="print-action">
       <button
+        type="button"
         onClick={handleDownload}
         disabled={isDisabled}
-        title={isDisabled && disabledReason ? disabledReason : undefined}
-        className={buttonClassName}
+        aria-describedby={isDisabled && disabledReason ? reasonId : undefined}
+        className="button-primary"
       >
-        {loading && <LoadingSpinner size={16} color="var(--button-primary-text)" />}
-        {loading ? "Generating..." : "Download PDF"}
+        {loading ? <LoadingSpinner size={16} color="currentColor" /> : <Icon name="download" />}
+        {loading ? "Preparing PDF…" : "Download PDF"}
       </button>
 
       {isDisabled && disabledReason && !loading && (
-        <div className="pdf-download-reason">
-          {disabledReason}
-        </div>
+        <p id={reasonId} className="field-hint">{disabledReason}</p>
       )}
 
-      {/* Error tooltip */}
       {error && (
-        <div className="pdf-download-error">
-          {error}
-        </div>
+        <p className="field-error" role="alert">{error}</p>
       )}
     </div>
   );

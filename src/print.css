@@ -1,0 +1,249 @@
+/* Browser print sheet. Sized in inches for print fidelity; intentionally not themed. */
+
+.browser-print-preview {
+  margin-top: 1rem;
+}
+
+.browser-print-preview-head h2 {
+  margin: 0 0 0.18rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.browser-print-preview-head p {
+  margin: 0 0 0.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.browser-print-preview-head .browser-print-preview-note {
+  margin-top: -0.35rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Print Sheet (hardcoded for print fidelity — intentionally
+   not themed)
+   ═══════════════════════════════════════════════════════════════ */
+
+.print-sheet {
+  margin: 0 auto;
+  border: 1px solid var(--border-color-strong);
+  background: #ffffff;
+  color: #111111;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  padding: 0.26in;
+}
+
+.print-sheet-letter {
+  width: 8.5in;
+  min-height: 11in;
+}
+
+.print-sheet-a4 {
+  width: 210mm;
+  min-height: 297mm;
+}
+
+.print-sheet-meta {
+  margin-bottom: 0.16in;
+  font-size: 10pt;
+  color: #444444;
+}
+
+.print-sheet-top {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 0.18in;
+  margin-bottom: 0.15in;
+  padding-bottom: 0.12in;
+  border-bottom: 1px solid #777777;
+}
+
+.print-sheet-top-copy p {
+  margin: 0 0 0.08in;
+  font-size: 8.8pt;
+  line-height: 1.28;
+}
+
+.print-sheet-top-copy p:last-child {
+  margin-bottom: 0;
+}
+
+.print-sheet-top-guides {
+  display: grid;
+  gap: 0.11in;
+  align-content: start;
+}
+
+.print-guide-box {
+  border: 1px dashed #666666;
+  min-height: 0.5in;
+  display: grid;
+  place-items: center;
+}
+
+.print-guide-fold {
+  border-style: solid;
+}
+
+.print-guide-label {
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #444444;
+}
+
+.print-sheet-grid-official {
+  display: grid;
+  gap: 0;
+}
+
+.print-sheet-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-face-card {
+  border: 1px dashed #555555;
+  min-height: 1.78in;
+  padding: 0.075in 0.085in;
+  overflow: hidden;
+}
+
+.print-face-front h2 {
+  margin: 0 0 0.045in;
+  font-size: 8.8pt;
+  line-height: 1.16;
+}
+
+.print-face-front ul {
+  margin: 0;
+  padding-inline-start: 0.11in;
+  display: grid;
+  gap: 0.027in;
+}
+
+.print-face-front li {
+  font-size: 7.9pt;
+  line-height: 1.16;
+}
+
+.print-face-front[dir="rtl"] {
+  text-align: right;
+}
+
+.print-face-front[dir="rtl"] ul {
+  padding-inline-start: 0;
+  padding-inline-end: 0;
+  list-style: none;
+}
+
+.print-face-front[dir="rtl"] li {
+  position: relative;
+  padding-inline-start: 0.07in;
+  padding-inline-end: 0;
+}
+
+.print-face-front[dir="rtl"] li::before {
+  content: "\2022";
+  position: absolute;
+  inset-inline-start: 0.015in;
+  top: 0.01in;
+  line-height: 1;
+}
+
+.print-face-back p {
+  margin: 0 0 0.032in;
+  font-size: 7.3pt;
+  line-height: 1.14;
+}
+
+.print-face-back p:last-child {
+  margin-bottom: 0;
+}
+
+.print-face-back p.is-italic {
+  font-style: italic;
+}
+
+.print-card {
+  border: 1px dotted #666666;
+  padding: 0.11in 0.12in;
+  min-height: 2in;
+  overflow: hidden;
+}
+
+.print-card h2 {
+  margin: 0 0 0.08in;
+  font-size: 12pt;
+  line-height: 1.25;
+}
+
+.print-card ul {
+  margin: 0;
+  padding-inline-start: 0.15in;
+  display: grid;
+  gap: 0.06in;
+}
+
+.print-card li {
+  font-size: 9.2pt;
+  line-height: 1.3;
+}
+
+.print-card[dir="rtl"] {
+  text-align: right;
+}
+
+.print-card[dir="rtl"] ul {
+  padding-inline-start: 0;
+  padding-inline-end: 0.15in;
+}
+
+
+@media print {
+  @page {
+    margin: 0.22in;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .print-sheet {
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    width: auto;
+    min-height: auto;
+    padding: 0.18in 0.2in 0.14in;
+    box-sizing: border-box;
+  }
+
+  .print-sheet-top {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-sheet-grid-official {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  .app-footer {
+    display: none;
+  }
+}
+
+

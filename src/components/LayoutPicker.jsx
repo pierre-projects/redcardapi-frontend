@@ -23,8 +23,8 @@ export default function LayoutPicker({
     : baseOptions;
 
   return (
-    <div style={{ display: "grid", gap: 8 }}>
-      <label htmlFor="layout-picker" style={{ fontWeight: 500 }}>
+    <div className="field">
+      <label htmlFor="layout-picker" className="field-label">
         Cards per page
       </label>
       <select

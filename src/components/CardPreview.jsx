@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "./Icon";
 
 /**
  * Flip-card preview for the print workspace. Only the visible face is exposed
@@ -26,14 +27,15 @@ export default function CardPreview({ card, back, onShowCard }) {
           {card.native !== card.name && <span className="preview-title-en"> · {card.name}</span>}
         </h2>
         {onShowCard && (
-          <button type="button" className="preview-show-button" onClick={onShowCard}>
-            Open full screen
+          <button type="button" onClick={onShowCard}>
+            <Icon name="maximize" />
+            Open card view
           </button>
         )}
       </div>
 
       <div className="preview-card-stage">
-        <div className="preview-card-viewport">
+        <div className={`preview-card-viewport ${isBack ? "is-back" : ""}`}>
           <button
             type="button"
             className="preview-flip-button"
@@ -41,7 +43,7 @@ export default function CardPreview({ card, back, onShowCard }) {
             aria-label={isBack ? "Show front (card language)" : "Show back (English, for the officer)"}
             title={isBack ? "Show front" : "Show back"}
           >
-            <span aria-hidden="true">⟲</span>
+            <Icon name="flip" />
           </button>
 
           <div className={`preview-card-flipper ${isBack ? "is-back" : ""}`}>

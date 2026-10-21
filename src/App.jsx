@@ -6,7 +6,8 @@ import CardPreview from "./components/CardPreview";
 import PdfDownloadButton from "./components/PdfDownloadButton";
 import FontWarning from "./components/FontWarning";
 import ThemeToggle from "./components/ThemeToggle";
-import HeroLanding from "./components/HeroLanding";
+import AboutSection from "./components/AboutSection";
+import Icon from "./components/Icon";
 import QuickCardAccess from "./components/QuickCardAccess";
 import ShowCard from "./components/ShowCard";
 import { LoadingMessage } from "./components/LoadingSpinner";
@@ -15,6 +16,7 @@ import { normalizeLanguageCode } from "./data/normalize";
 import { getBrowserLanguageTags, matchLanguageTag, matchPreferredLanguage } from "./lib/languageMatch";
 import { safeGet, safeRemove, safeSet } from "./lib/storage";
 import "./App.css";
+import "./print.css";
 
 // The builder is an authoring tool; keep it out of the bundle card users load.
 const TranslationPayloadBuilder = lazy(() => import("./components/TranslationPayloadBuilder"));
@@ -22,7 +24,6 @@ const TranslationPayloadBuilder = lazy(() => import("./components/TranslationPay
 const LANGUAGE_STORAGE_KEY = "selected-language";
 const LAYOUT_STORAGE_KEY = "selected-cards-per-page";
 const PRINT_METHOD_STORAGE_KEY = "selected-print-method";
-const BUILDER_HELP_DISMISSED_KEY = "redcard-builder-help-dismissed";
 const PAGE_HOME = "home";
 const PAGE_CARD = "card";
 const PAGE_REDCARDS = "redcards";
@@ -32,20 +33,20 @@ const AVAILABLE_CODES = new Set(LANGUAGES.map((language) => language.code));
 const BACKEND_GRID_FALLBACK_LAYOUTS = [4, 6, 8, 12];
 const BACKEND_FOLD_FALLBACK_LAYOUTS = [4, 5, 6];
 const BACKEND_GRID_LAYOUT_LABELS = {
-  4: "4 cards (2x2)",
-  6: "6 cards (2x3)",
-  8: "8 cards (2x4)",
-  12: "12 cards (3x4)",
+  4: "4 cards (2 × 2)",
+  6: "6 cards (2 × 3)",
+  8: "8 cards (2 × 4)",
+  12: "12 cards (3 × 4)",
 };
 const BACKEND_FOLD_LAYOUT_LABELS = {
-  4: "4 rows (2 columns)",
-  5: "5 rows (2 columns)",
-  6: "6 rows (2 columns)",
+  4: "4 cards, fold style",
+  5: "5 cards, fold style",
+  6: "6 cards, fold style",
 };
 const BROWSER_LAYOUT_OPTIONS = [
-  { value: 8, label: "4 cards (4 front + 4 back)" },
-  { value: 10, label: "5 cards (5 front + 5 back)" },
-  { value: 12, label: "6 cards (6 front + 6 back)" },
+  { value: 8, label: "4 cards, fold style" },
+  { value: 10, label: "5 cards, fold style" },
+  { value: 12, label: "6 cards, fold style" },
 ];
 
 function getStoredLayout() {
@@ -137,16 +138,8 @@ export default function App() {
   const [printMethod, setPrintMethod] = useState(getStoredPrintMethod);
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [builderPrintCard, setBuilderPrintCard] = useState(null);
-  const [builderHelpDismissed, setBuilderHelpDismissedState] = useState(
-    () => safeGet(BUILDER_HELP_DISMISSED_KEY) === "true"
-  );
   const [showBuilderAboutModal, setShowBuilderAboutModal] = useState(false);
   const modalCloseRef = useRef(null);
-
-  const dismissBuilderHelp = () => {
-    setBuilderHelpDismissedState(true);
-    safeSet(BUILDER_HELP_DISMISSED_KEY, "true");
-  };
 
   const { page, routeCode, requestedCode } = route;
 
@@ -286,20 +279,6 @@ export default function App() {
           ? "PDF download is not available for this language yet. Use Browser Print."
           : "";
 
-  const recommendedMethod = (pdfStatus === "unavailable" || (selectedLanguage && !fontSupported))
-    ? "browser"
-    : "backend";
-
-  const recommendationMessage = recommendedMethod === "backend"
-    ? "Recommended now: Backend PDF for stable, cross-printer output."
-    : "Recommended now: Browser Print, which works for every language without the PDF service.";
-
-  const methodDescription = printMethod === "backend"
-    ? backendRenderMode === "fold"
-      ? "Backend PDF uses official fold layout (2 columns front|back)."
-      : "Use when accuracy and printer-to-printer consistency matter most."
-    : "Browser print uses fixed 2-column fold layout (4x2 minimum), closer to official card sheets. Turn off browser headers/footers before printing.";
-
   const pageSizeLabel = (config?.page_size || "letter").toUpperCase();
 
   const redcardsBrowserPrintReady = Boolean(card);
@@ -344,13 +323,6 @@ export default function App() {
     window.print();
   };
 
-  const browserPrintButtonClass = [
-    "pdf-download-button",
-    !redcardsBrowserPrintReady ? "is-disabled" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   const navigateTo = (nextPage, code = "") => {
     const nextPath = getPath(nextPage, code);
 
@@ -394,73 +366,46 @@ export default function App() {
     );
   }
 
+  const navLink = (targetPage, label, code = "") => (
+    <a
+      href={getPath(targetPage, code)}
+      className="site-nav-link"
+      aria-current={page === targetPage ? "page" : undefined}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+        event.preventDefault();
+        navigateTo(targetPage, code);
+      }}
+    >
+      {label}
+    </a>
+  );
+
   return (
     <div className="app-shell">
+      <header className="site-header no-print">
+        <div className="site-header-inner">
+          <a
+            href="/"
+            className="brand"
+            onClick={(event) => {
+              event.preventDefault();
+              navigateTo(PAGE_HOME);
+            }}
+          >
+            <span className="brand-mark" aria-hidden="true" />
+            Red Card
+          </a>
+          <nav className="site-nav" aria-label="Main">
+            {navLink(PAGE_HOME, "Cards")}
+            {navLink(PAGE_REDCARDS, "Print", selected)}
+            {navLink(PAGE_BUILDER, "Build")}
+          </nav>
+          <ThemeToggle />
+        </div>
+      </header>
+
       <div className="no-print">
-        <header className="app-header">
-          <h1 className="app-title">
-            <span className="app-title-accent">RedCard</span>API
-            <span className="app-title-sub">Know Your Rights</span>
-          </h1>
-          <div className="app-header-right">
-            <nav className="page-nav" aria-label="App pages">
-              <button
-                type="button"
-                className={`page-nav-button ${page === PAGE_HOME ? "is-active" : ""}`}
-                aria-current={page === PAGE_HOME ? "page" : undefined}
-                onClick={() => navigateTo(PAGE_HOME)}
-              >
-                Cards
-              </button>
-              <button
-                type="button"
-                className={`page-nav-button ${page === PAGE_REDCARDS ? "is-active" : ""}`}
-                aria-current={page === PAGE_REDCARDS ? "page" : undefined}
-                onClick={() => navigateTo(PAGE_REDCARDS, selected)}
-              >
-                Print
-              </button>
-              <button
-                type="button"
-                className={`page-nav-button ${page === PAGE_BUILDER ? "is-active" : ""}`}
-                aria-current={page === PAGE_BUILDER ? "page" : undefined}
-                onClick={() => navigateTo(PAGE_BUILDER)}
-              >
-                Build a Red Card
-              </button>
-            </nav>
-            <ThemeToggle />
-          </div>
-        </header>
-
-        {page !== PAGE_HOME && (
-          <p className="app-subtitle">
-            {page === PAGE_REDCARDS
-              ? "Print paper cards: browser print works for every language; backend PDF gives the most consistent output."
-              : "Build a Red Card translation payload from named statements without writing JSON by hand."}
-          </p>
-        )}
-
-        {page === PAGE_BUILDER && !builderHelpDismissed && (
-          <div className="app-builder-help" role="region" aria-label="How to use this builder">
-            <p className="app-builder-help-text">
-              Fill in language details and statements, then use the live preview and browser print or export JSON for review workflows.
-            </p>
-            <div className="app-builder-help-actions">
-              <button type="button" className="app-builder-help-dismiss" onClick={dismissBuilderHelp}>
-                Got it
-              </button>
-              <button
-                type="button"
-                className="app-builder-info-button"
-                onClick={() => setShowBuilderAboutModal(true)}
-              >
-                About this tool
-              </button>
-            </div>
-          </div>
-        )}
-
         {page === PAGE_BUILDER && showBuilderAboutModal && (
           <div
             className="app-builder-about-backdrop"
@@ -481,41 +426,37 @@ export default function App() {
                 }
               }}
             >
-              <div className="app-builder-about-modal-inner">
-                <div className="app-builder-about-modal-head">
-                  <h3 id="builder-about-title">How To Use This Builder</h3>
-                  <button
-                    ref={modalCloseRef}
-                    type="button"
-                    className="app-builder-about-modal-close"
-                    onClick={() => setShowBuilderAboutModal(false)}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-                <p>
-                  Fill in language details and statements, then use the live preview and browser print or export JSON for review workflows.
-                </p>
-                <h4>In Progress (Future Scope)</h4>
-                <ul>
-                  <li>Backend submission flow for translation review and approval.</li>
-                  <li>Machine translation provider integration through adapter contracts.</li>
-                  <li>Duplicate-check against stored translations before submission.</li>
-                  <li>Optional caching layer for translation suggestions.</li>
-                </ul>
+              <div className="app-builder-about-modal-head">
+                <h2 id="builder-about-title">How to use the builder</h2>
+                <button
+                  ref={modalCloseRef}
+                  type="button"
+                  className="button-quiet"
+                  onClick={() => setShowBuilderAboutModal(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
               </div>
+              <p>
+                Fill in the language details and statements, check the live preview, then print or
+                export the JSON for review.
+              </p>
+              <h3>Planned</h3>
+              <ul>
+                <li>Submitting translations for review and approval.</li>
+                <li>Machine translation suggestions through provider adapters.</li>
+                <li>Checking for duplicates against existing translations.</li>
+              </ul>
             </div>
           </div>
         )}
 
         {page === PAGE_HOME && (
-          <main className="animate-in">
+          <main className="page">
             {invalidRouteCode && (
-              <div className="app-error-banner" role="alert">
-                <span className="app-error-text">
-                  No card for “{requestedCode}”. Choose your language below.
-                </span>
+              <div className="notice notice-error" role="alert">
+                No card for “{requestedCode}”. Choose your language below.
               </div>
             )}
             <QuickCardAccess
@@ -524,135 +465,144 @@ export default function App() {
               onOpenCard={openCard}
               onForget={selected ? () => rememberLanguage("") : null}
             />
-            <HeroLanding
+            <AboutSection
               languageCount={LANGUAGES.length}
-              onGoRedcards={() => navigateTo(PAGE_REDCARDS, selected)}
-              onGoBuilder={() => navigateTo(PAGE_BUILDER)}
+              onGoPrint={() => navigateTo(PAGE_REDCARDS, selected)}
             />
           </main>
         )}
 
         {page === PAGE_REDCARDS && (
-          <main>
+          <main className="page">
+            <div className="page-head">
+              <h1>Print paper cards</h1>
+              <p>
+                Choose a language and layout, then download a PDF or print from this browser.
+                Cut along the dotted lines and fold each card down the middle.
+              </p>
+            </div>
+
             {invalidRouteCode && (
-              <div className="app-error-banner" role="alert">
-                <span className="app-error-text">
-                  Language code “{requestedCode}” is not available. Choose a supported language below.
-                </span>
-                <button type="button" onClick={() => navigateTo(PAGE_REDCARDS)}>
-                  Choose a language
-                </button>
+              <div className="notice notice-error" role="alert">
+                <span>“{requestedCode}” is not an available language. Choose one below.</span>
               </div>
             )}
 
             {pdfStatus === "unavailable" && (
-              <div className="app-error-banner" role="alert">
-                <span className="app-error-text">
-                  PDF service unavailable ({pdfError}). Cards and Browser Print still work.
-                </span>
-                <button type="button" onClick={retryPdfService}>Retry</button>
+              <div className="notice" role="alert">
+                <span>PDF downloads are unavailable right now ({pdfError}). Printing from the browser still works.</span>
+                <button type="button" onClick={retryPdfService}>Try again</button>
               </div>
             )}
 
-            <div className="app-controls">
-              <LanguagePicker
-                languages={languages}
-                value={effectiveSelected}
-                onChange={handleLanguageChange}
-              />
-              <LayoutPicker
-                value={effectiveCardsPerPage}
-                onChange={setStoredCardsPerPage}
-                options={activeLayoutOptions}
-              />
-            </div>
+            <div className="print-layout">
+              <section className="print-settings" aria-label="Print settings">
+                <LanguagePicker
+                  languages={languages}
+                  value={effectiveSelected}
+                  onChange={handleLanguageChange}
+                />
+                <LayoutPicker
+                  value={effectiveCardsPerPage}
+                  onChange={setStoredCardsPerPage}
+                  options={activeLayoutOptions}
+                />
 
-            <div className="preview-wrap animate-in">
-              <CardPreview
-                key={card?.code || "none"}
-                card={card}
-                back={BACK_CONTENT}
-                onShowCard={card ? () => openCard(card.code) : null}
-              />
-            </div>
-
-            {selectedLanguage && pdfServiceReady && !fontSupported && (
-              <FontWarning language={selectedLanguage} />
-            )}
-
-            <div className="print-meta-row">
-              <section className="method-panel" aria-label="Print method settings">
-                <label htmlFor="print-method-select" className="method-label">Print method</label>
-                <select
-                  id="print-method-select"
-                  value={printMethod}
-                  onChange={(event) => setPrintMethod(event.target.value === "browser" ? "browser" : "backend")}
-                >
-                  <option value="backend">Backend PDF - Best consistency</option>
-                  <option value="browser">Browser Print - Official 2-column format</option>
-                </select>
-                <div className="method-note">{methodDescription}</div>
-                <div className="method-action-row">
-                  {printMethod === "browser" ? (
-                    <>
-                      <button
-                        type="button"
-                        className={browserPrintButtonClass}
-                        onClick={handleBrowserPrint}
-                        disabled={!redcardsBrowserPrintReady}
-                      >
-                        Print From Browser
-                      </button>
-                      <p className="browser-print-tip">
-                        Before printing: turn off Headers and footers, set Scale to 100%, and keep portrait layout.
-                      </p>
-                    </>
-                  ) : (
-                    <PdfDownloadButton
-                      code={effectiveSelected}
-                      cardsPerPage={effectiveCardsPerPage}
-                      mode={backendRenderMode}
-                      disabled={backendDownloadDisabled}
-                      disabledReason={backendDisabledReason}
+                <fieldset className="field">
+                  <legend className="field-label">Output</legend>
+                  <label className="choice">
+                    <input
+                      type="radio"
+                      name="print-method"
+                      value="backend"
+                      checked={printMethod === "backend"}
+                      onChange={() => setPrintMethod("backend")}
                     />
-                  )}
-                </div>
-                {pdfStatus === "loading" && printMethod === "backend" && (
-                  <LoadingMessage message="Connecting to the PDF service..." />
+                    <span>
+                      <strong>PDF file</strong>
+                      <span className="choice-hint">Same result on any printer. Fronts and backs side by side for folding.</span>
+                    </span>
+                  </label>
+                  <label className="choice">
+                    <input
+                      type="radio"
+                      name="print-method"
+                      value="browser"
+                      checked={printMethod === "browser"}
+                      onChange={() => setPrintMethod("browser")}
+                    />
+                    <span>
+                      <strong>Print from browser</strong>
+                      <span className="choice-hint">Works for every language, even when PDF download is unavailable.</span>
+                    </span>
+                  </label>
+                </fieldset>
+
+                {selectedLanguage && pdfServiceReady && !fontSupported && (
+                  <FontWarning language={selectedLanguage} />
                 )}
-                <div className="method-recommend-row">
-                  <span className="method-recommend-text">{recommendationMessage}</span>
-                  {printMethod !== recommendedMethod && (
+
+                {printMethod === "browser" ? (
+                  <div className="print-action">
                     <button
                       type="button"
-                      className="method-recommend-button"
-                      onClick={() => setPrintMethod(recommendedMethod)}
+                      className="button-primary"
+                      onClick={handleBrowserPrint}
+                      disabled={!redcardsBrowserPrintReady}
                     >
-                      Use Recommended
+                      <Icon name="printer" />
+                      Print
                     </button>
-                  )}
-                </div>
+                    <p className="field-hint">
+                      In the print dialog, turn off headers and footers and set scale to 100%.
+                    </p>
+                  </div>
+                ) : (
+                  <PdfDownloadButton
+                    code={effectiveSelected}
+                    cardsPerPage={effectiveCardsPerPage}
+                    mode={backendRenderMode}
+                    disabled={backendDownloadDisabled}
+                    disabledReason={backendDisabledReason}
+                  />
+                )}
+
+                <details className="disclosure">
+                  <summary>Printing tips</summary>
+                  <ul>
+                    <li>{pageSizeLabel} paper, portrait, scale 100% (not “fit to page”).</li>
+                    <li>Default or minimum margins.</li>
+                    <li>Use heavy paper or card stock if you can.</li>
+                    <li>Printing both sides: if the backs come out upside down, switch the flip edge.</li>
+                    <li>Cut along the dotted lines and fold on the dashed line.</li>
+                  </ul>
+                </details>
               </section>
 
-              <details className="print-panel app-print-panel">
-                <summary className="print-panel-title">Print Instructions</summary>
-                <ul className="print-panel-list">
-                  <li>Paper: {pageSizeLabel}, portrait orientation.</li>
-                  <li>Scale: Actual size (100%), no fit-to-page.</li>
-                  <li>Browser print: Turn OFF headers and footers (removes URL/date and prevents overflow).</li>
-                  <li>Margins: Default or minimum. Avoid oversized custom margins.</li>
-                  <li>Duplex: Print front and back on the same sheet.</li>
-                  <li>If backs are upside down, switch flip edge setting.</li>
-                  <li>Cut dotted borders and fold on dashed guides.</li>
-                </ul>
-              </details>
+              <section className="print-preview" aria-label="Preview">
+                <CardPreview
+                  key={card?.code || "none"}
+                  card={card}
+                  back={BACK_CONTENT}
+                  onShowCard={card ? () => openCard(card.code) : null}
+                />
+              </section>
             </div>
           </main>
         )}
 
         {page === PAGE_BUILDER && (
-          <main className="builder-wrap animate-in">
-            <Suspense fallback={<LoadingMessage message="Loading builder..." />}>
+          <main className="page">
+            <div className="page-head">
+              <h1>Build a red card</h1>
+              <p>
+                Prepare a new translation from the standard statements without editing JSON by hand.{" "}
+                <button type="button" className="link-button" onClick={() => setShowBuilderAboutModal(true)}>
+                  How it works
+                </button>
+              </p>
+            </div>
+            <Suspense fallback={<LoadingMessage message="Loading builder…" />}>
               <TranslationPayloadBuilder
                 onPrintableCardChange={setBuilderPrintCard}
                 onPrintRequest={handleBrowserPrint}
@@ -663,17 +613,17 @@ export default function App() {
         )}
       </div>
 
-      <footer className="app-footer no-print">
-        <div className="app-footer-inner">
-          <p className="app-footer-disclaimer">
-            This tool provides general information about constitutional rights. It is not legal advice. Consult an attorney for guidance specific to your situation.
+      <footer className="site-footer no-print">
+        <div className="site-footer-inner">
+          <p>
+            General information about constitutional rights, not legal advice. For advice about your
+            situation, contact an immigration attorney or legal aid organization.
           </p>
-          <p className="app-footer-disclaimer">
-            No tracking. Your chosen language is remembered only on this device.
+          <p>
+            Card text from the <a href="https://www.ilrc.org/red-cards" target="_blank" rel="noopener noreferrer">Immigrant Legal Resource Center</a>.
+            No tracking; your language choice stays on this device.{" "}
+            <a href="https://github.com/pierre-projects/redcardapi-frontend" target="_blank" rel="noopener noreferrer">Source code</a>
           </p>
-          <div className="app-footer-links">
-            <a href="https://github.com/pierre-projects/redcardapi-frontend" target="_blank" rel="noopener noreferrer">GitHub</a>
-          </div>
         </div>
       </footer>
 

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { searchLanguages } from "../lib/languageMatch";
+import Icon from "./Icon";
 
 export default function LanguagePicker({ languages, value, onChange }) {
   const [search, setSearch] = useState("");
@@ -141,51 +142,26 @@ export default function LanguagePicker({ languages, value, onChange }) {
   };
 
   return (
-    <div style={{ display: "grid", gap: 8 }} ref={containerRef}>
-      <span id={labelId} style={{ fontWeight: 600 }}>Language</span>
-      <div style={{ position: "relative" }}>
+    <div className="field picker" ref={containerRef}>
+      <span id={labelId} className="field-label">Language</span>
+      <div className="picker-anchor">
         <button
           type="button"
+          className={`picker-trigger ${value ? "" : "is-empty"}`}
           onClick={toggleDropdown}
           onKeyDown={handleTriggerKeyDown}
           aria-haspopup="listbox"
           aria-labelledby={`${labelId} ${baseId}-value`}
           aria-expanded={isOpen}
           aria-controls={listboxId}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            textAlign: "left",
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
-            borderRadius: 8,
-            cursor: "pointer",
-            color: value ? "var(--color-text)" : "var(--color-text-muted)",
-          }}
         >
-          <span id={`${baseId}-value`}>{displayValue || "Select a language..."}</span>
-          <span style={{ float: "right" }} aria-hidden="true">{isOpen ? "▴" : "▾"}</span>
+          <span id={`${baseId}-value`}>{displayValue || "Select a language"}</span>
+          <Icon name="chevron-down" />
         </button>
 
         {isOpen && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              marginTop: 4,
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
-              borderRadius: 8,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              zIndex: 100,
-              maxHeight: 300,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div style={{ padding: 8, borderBottom: "1px solid var(--border-color)" }}>
+          <div className="picker-popover">
+            <div className="picker-search">
               <input
                 ref={inputRef}
                 type="text"
@@ -195,7 +171,7 @@ export default function LanguagePicker({ languages, value, onChange }) {
                   setHighlightedIndex(0);
                 }}
                 onKeyDown={handleInputKeyDown}
-                placeholder="Search in any language..."
+                placeholder="Search in any language"
                 aria-label="Search languages"
                 role="combobox"
                 aria-controls={listboxId}
@@ -206,35 +182,12 @@ export default function LanguagePicker({ languages, value, onChange }) {
                     ? `${baseId}-option-${filtered[safeHighlightedIndex].code}`
                     : undefined
                 }
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: 6,
-                  background: "var(--bg-primary)",
-                  color: "var(--color-text)",
-                  fontSize: 14,
-                  boxSizing: "border-box",
-                }}
               />
             </div>
 
-            <div
-              id={listboxId}
-              role="listbox"
-              aria-labelledby={labelId}
-              style={{ overflow: "auto", flex: 1 }}
-            >
+            <div id={listboxId} role="listbox" aria-labelledby={labelId} className="picker-list">
               {filtered.length === 0 ? (
-                <div
-                  style={{
-                    padding: 12,
-                    textAlign: "center",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  No languages found
-                </div>
+                <div className="picker-empty">No languages found</div>
               ) : (
                 filtered.map((l, index) => (
                   <div
@@ -247,34 +200,16 @@ export default function LanguagePicker({ languages, value, onChange }) {
                     }}
                     role="option"
                     aria-selected={l.code === value}
-                    style={{
-                      padding: "10px 12px",
-                      textAlign: "start",
-                      background:
-                        index === safeHighlightedIndex
-                          ? "var(--bg-tertiary)"
-                          : l.code === value
-                            ? "var(--bg-secondary)"
-                            : "transparent",
-                      border: "none",
-                      borderBottom: "1px solid var(--border-color)",
-                      cursor: "pointer",
-                      color: "var(--color-text)",
-                    }}
+                    className={`picker-option ${index === safeHighlightedIndex ? "is-active" : ""}`}
                   >
-                    <span lang={l.code} dir={l.rtl ? "rtl" : "ltr"} style={{ fontWeight: 600 }}>
+                    <span lang={l.code} dir={l.rtl ? "rtl" : "ltr"} className="picker-option-native">
                       {l.native}
                     </span>
-                    {l.native !== l.name && (
-                      <span style={{ marginInlineStart: 8, color: "var(--color-text-muted)" }}>
-                        {l.name}
-                      </span>
-                    )}
+                    {l.native !== l.name && <span className="picker-option-name">{l.name}</span>}
                     {l.fontSupported === false && (
-                      <span style={{ display: "block", fontSize: 12, color: "var(--color-text-muted)" }}>
-                        PDF download unavailable · browser print works
-                      </span>
+                      <span className="picker-option-note">PDF unavailable · browser print works</span>
                     )}
+                    {l.code === value && <Icon name="check" size={16} className="picker-option-check" />}
                   </div>
                 ))
               )}

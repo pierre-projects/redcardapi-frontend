@@ -1,48 +1,41 @@
 import { useEffect, useState } from "react";
 import { safeGet, safeSet } from "../lib/storage";
+import Icon from "./Icon";
 
 const STORAGE_KEY = "theme-preference";
 
-function getInitialTheme() {
-  const stored = safeGet(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") {
-    return stored;
-  }
-
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+function systemTheme() {
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+/**
+ * Follows the system theme until the user picks one; only an explicit choice
+ * is saved, so a visitor's OS setting keeps applying otherwise.
+ */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [theme, setTheme] = useState(() => {
+    const stored = safeGet(STORAGE_KEY);
+    return stored === "light" || stored === "dark" ? stored : systemTheme();
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    safeSet(STORAGE_KEY, theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  };
+  const next = theme === "dark" ? "light" : "dark";
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      className="theme-toggle"
+      className="icon-button"
+      onClick={() => {
+        safeSet(STORAGE_KEY, next);
+        setTheme(next);
+      }}
+      aria-label={`Switch to ${next} theme`}
+      title={`Switch to ${next} theme`}
     >
-      <span
-        className={`theme-toggle-track ${theme === "dark" ? "is-dark" : ""}`}
-        aria-hidden="true"
-      >
-        <span className="theme-toggle-thumb" />
-      </span>
-      <span className="theme-toggle-text">
-        {theme === "dark" ? "Dark" : "Light"}
-      </span>
+      <Icon name={theme === "dark" ? "sun" : "moon"} />
     </button>
   );
 }
