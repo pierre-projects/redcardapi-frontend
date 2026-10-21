@@ -8,6 +8,7 @@ export default function LanguagePicker({ languages, value, onChange }) {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+  const triggerRef = useRef(null);
   const optionRefs = useRef([]);
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
@@ -90,6 +91,7 @@ export default function LanguagePicker({ languages, value, onChange }) {
   const handleSelect = (code) => {
     onChange(code);
     closeDropdown();
+    triggerRef.current?.focus();
   };
 
   const handleTriggerKeyDown = (e) => {
@@ -138,6 +140,12 @@ export default function LanguagePicker({ languages, value, onChange }) {
     if (e.key === "Escape") {
       e.preventDefault();
       closeDropdown();
+      triggerRef.current?.focus();
+      return;
+    }
+
+    if (e.key === "Tab") {
+      closeDropdown();
     }
   };
 
@@ -146,6 +154,7 @@ export default function LanguagePicker({ languages, value, onChange }) {
       <span id={labelId} className="field-label">Language</span>
       <div className="picker-anchor">
         <button
+          ref={triggerRef}
           type="button"
           className={`picker-trigger ${value ? "" : "is-empty"}`}
           onClick={toggleDropdown}
@@ -185,11 +194,21 @@ export default function LanguagePicker({ languages, value, onChange }) {
               />
             </div>
 
-            <div id={listboxId} role="listbox" aria-labelledby={labelId} className="picker-list">
-              {filtered.length === 0 ? (
-                <div className="picker-empty">No languages found</div>
-              ) : (
-                filtered.map((l, index) => (
+            <p className="visually-hidden" role="status">
+              {search ? `${filtered.length} ${filtered.length === 1 ? "language" : "languages"} found` : ""}
+            </p>
+            {filtered.length === 0 && <div className="picker-empty">No languages found</div>}
+            <div
+              id={listboxId}
+              role="listbox"
+              aria-labelledby={labelId}
+              className="picker-list"
+              hidden={filtered.length === 0}
+            >
+              {filtered.map((l, index) => (
+                  // Combobox pattern: focus stays in the search box and options are
+                  // reached with aria-activedescendant, so they are not tabbable.
+                  // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
                   <div
                     key={l.code}
                     id={`${baseId}-option-${l.code}`}
@@ -211,8 +230,7 @@ export default function LanguagePicker({ languages, value, onChange }) {
                     )}
                     {l.code === value && <Icon name="check" size={16} className="picker-option-check" />}
                   </div>
-                ))
-              )}
+              ))}
             </div>
           </div>
         )}

@@ -126,6 +126,13 @@ export async function renderCardImage(card, back) {
   });
 }
 
+/** Text alternative for the card image: everything the picture says. */
+export function cardImageAlt(card, back) {
+  const front = [card.front.header, ...card.front.bullets].filter(Boolean).join(" ");
+  const officer = [...back.statements, back.footer].filter(Boolean).join(" ");
+  return `Red Card in ${card.name}. Front (${card.name}): ${front} Back (English, for the officer): ${officer}`;
+}
+
 /** Share the image where the OS supports it (saves to Photos), else download. */
 export async function saveCardImage(card, back) {
   const blob = await renderCardImage(card, back);
@@ -134,7 +141,7 @@ export async function saveCardImage(card, back) {
 
   if (file && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: card.native });
+      await navigator.share({ files: [file], title: card.native, text: cardImageAlt(card, back) });
       return;
     } catch (error) {
       if (error?.name === "AbortError") return;

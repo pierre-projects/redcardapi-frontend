@@ -6,6 +6,7 @@ import LanguageBasicsSection from "./components/LanguageBasicsSection";
 import StatementsSection from "./components/StatementsSection";
 import LivePreviewSection from "./components/LivePreviewSection";
 import ExportSection from "./components/ExportSection";
+import PrintSection from "./components/PrintSection";
 import { useTranslationBuilderController } from "./hooks/useTranslationBuilderController";
 import { selectBuilderDerivedState } from "./selectors/builderSelectors";
 import { builderReducer } from "./state/builderReducer";
@@ -16,6 +17,8 @@ export default function TranslationBuilderPage({
   onPrintableCardChange = () => {},
   onPrintRequest = () => window.print(),
   onOpenAboutModal,
+  printSettings = null,
+  printColors = null,
   services,
 }) {
   const resolvedServices = useMemo(
@@ -87,12 +90,19 @@ export default function TranslationBuilderPage({
           <LivePreviewSection
             isValid={derived.validation.isValid}
             previewCard={derived.previewCard}
+            colors={printColors}
+          />
+
+          <PrintSection
+            isValid={derived.validation.isValid}
+            missing={derived.validation.missing}
+            onPrint={controller.onPrint}
+            settings={printSettings}
           />
 
           <ExportSection
             isValid={derived.validation.isValid}
             copyState={state.copyState}
-            onPrint={controller.onPrint}
             onCopy={controller.onCopy}
             onDownload={controller.onDownload}
             onReset={controller.onReset}

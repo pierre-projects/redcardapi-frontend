@@ -21,7 +21,7 @@ function getStoredScaleIndex() {
  * toggle to the English side for the officer, and the tools that matter in
  * the moment (bigger text, full screen, screen kept on, save, share, listen).
  */
-export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
+export default function ShowCard({ card, back, onAllLanguages, onPrint, printHref }) {
   const t = getTranslator(card.code);
   const uiDir = RTL_UI_LANGS.has(t.lang) ? "rtl" : "ltr";
   const [side, setSide] = useState("front");
@@ -129,7 +129,8 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
   };
 
   return (
-    <div
+    <main
+      id="main"
       ref={pageRef}
       className={`show-page ${isFullscreen ? "is-fullscreen" : ""}`}
       style={{ "--card-text-scale": TEXT_SCALES[scaleIndex] }}
@@ -139,16 +140,28 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
           <Icon name={uiDir === "rtl" ? "arrow-right" : "arrow-left"} />
           {t("allLanguages")}
         </button>
-        {(offlineReady || screenOn) && (
-          <p className="show-status" aria-live="polite">
-            {offlineReady && (
-              <span><Icon name="check" size={16} />{t("offlineReady")}</span>
-            )}
-            {screenOn && (
-              <span><Icon name="sun" size={16} />{t("screenOn")}</span>
-            )}
-          </p>
-        )}
+        {/* A real link so it can be opened in a new tab; plain clicks stay in the app. */}
+        <a
+          className="button button-quiet show-print"
+          href={printHref}
+          onClick={(event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+            event.preventDefault();
+            onPrint();
+          }}
+        >
+          <Icon name="printer" />
+          {t("print")}
+        </a>
+        {/* Always mounted so screen readers announce status changes. */}
+        <p className="show-status" aria-live="polite" hidden={!(offlineReady || screenOn)}>
+          {offlineReady && (
+            <span><Icon name="check" size={16} />{t("offlineReady")}</span>
+          )}
+          {screenOn && (
+            <span><Icon name="sun" size={16} />{t("screenOn")}</span>
+          )}
+        </p>
       </div>
 
       <div className="segmented" role="group" aria-label={card.native} lang={t.lang} dir={uiDir}>
@@ -232,7 +245,7 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
         )}
       </div>
 
-      {toast && <div className="toast" role="status">{toast}</div>}
+      <div className="toast" role="status" hidden={!toast}>{toast}</div>
 
       <details className="disclosure show-about">
         <summary>About this translation</summary>
@@ -262,6 +275,6 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint }) {
           General information about constitutional rights, not legal advice.
         </p>
       </details>
-    </div>
+    </main>
   );
 }

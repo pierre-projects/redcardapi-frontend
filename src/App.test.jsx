@@ -85,6 +85,30 @@ describe("card view", () => {
   });
 });
 
+describe("card view print link", () => {
+  it("links to the print page for the same language, in the card's language", () => {
+    renderAt("/card/es");
+    const link = screen.getByRole("link", { name: "Imprimir" });
+    expect(link).toHaveAttribute("href", "/redcards/es");
+    fireEvent.click(link);
+    expect(window.location.pathname).toBe("/redcards/es");
+    expect(screen.getByRole("heading", { level: 1, name: "Print paper cards" })).toBeInTheDocument();
+  });
+});
+
+describe("builder print", () => {
+  it("has its own print section that explains what is missing", async () => {
+    renderAt("/builder");
+    const section = await screen.findByRole("region", { name: "Print" }, { timeout: 5000 });
+    const button = within(section).getByRole("button", { name: /Print cards/ });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(/Fill in the required fields to print: Language name/);
+    expect(within(section).getByLabelText("Cards per page")).toBeInTheDocument();
+    expect(within(section).getByRole("radio", { name: /Color print/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Print From Browser/ })).toBeNull();
+  });
+});
+
 describe("print workspace", () => {
   it("warns before printing a translation that needs native review", () => {
     renderAt("/redcards/km");
@@ -103,5 +127,23 @@ describe("print workspace", () => {
     });
     vi.useRealTimers();
     expect(screen.getByRole("alert")).toHaveTextContent(/PDF downloads are unavailable/);
+  });
+
+  it("offers a color print that colors the preview and the browser print sheet", () => {
+    window.localStorage.setItem("selected-print-method", "browser");
+    const { container } = renderAt("/redcards/es");
+    expect(screen.queryByRole("radiogroup", { name: "Card color" })).toBeNull();
+    expect(container.querySelector(".print-sheet--color")).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: /Color print/ }));
+    const swatches = screen.getByRole("radiogroup", { name: "Card color" });
+    expect(within(swatches).getByRole("radio", { name: "Red" })).toBeChecked();
+
+    fireEvent.click(within(swatches).getByRole("radio", { name: "Blue" }));
+    const sheet = container.querySelector(".print-sheet--color");
+    expect(sheet.style.getPropertyValue("--card-bg")).toBe("#1D4ED8");
+    expect(sheet.style.getPropertyValue("--card-fg")).toBe("#FFFFFF");
+    expect(window.localStorage.getItem("selected-print-style")).toBe("color");
+    expect(window.localStorage.getItem("selected-print-color")).toBe("#1D4ED8");
   });
 });

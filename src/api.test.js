@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, fetchWithRetry } from "./api";
+import { ApiError, fetchWithRetry, pdfUrl } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -55,5 +55,12 @@ describe("fetchWithRetry", () => {
     await expect(fetchWithRetry("/x", { timeoutMs: 20, retries: 0 })).rejects.toMatchObject({
       name: "TimeoutError",
     });
+  });
+});
+
+describe("pdfUrl", () => {
+  it("adds the card color only for color prints", () => {
+    expect(pdfUrl("es", { cardsPerPage: 4, mode: "fold" })).not.toContain("color=");
+    expect(pdfUrl("es", { cardsPerPage: 4, mode: "fold", color: "#B91C1C" })).toMatch(/[?&]color=B91C1C$/);
   });
 });

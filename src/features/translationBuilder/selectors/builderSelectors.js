@@ -46,6 +46,8 @@ export function selectPreviewCard(payload, isValid) {
 
   return {
     name: payload.name,
+    // The builder has no separate native name; the name is what the author typed.
+    native: payload.name,
     code: payload.code,
     rtl: payload.rtl,
     official: payload.official,
