@@ -1,6 +1,8 @@
 /* Browser print sheet. Sized in inches for print fidelity; intentionally not themed. */
 
+/* Print-only: the sheet is 8.5in wide and would force mobile browsers to zoom out. */
 .browser-print-preview {
+  display: none;
   margin-top: 1rem;
 }
 
@@ -223,6 +225,11 @@
 
   .no-print {
     display: none !important;
+  }
+
+  .browser-print-preview {
+    display: block;
+    margin-top: 0;
   }
 
   body {
