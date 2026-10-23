@@ -1,52 +1,34 @@
 /* Browser print sheet. Sized in inches for print fidelity; intentionally not themed. */
 
-/* Print-only: the sheet is 8.5in wide and would force mobile browsers to zoom out. */
+/* Print-only. On screen the sheet stays laid out (off-screen, so it
+   can't widen the page and make phones zoom out) because App measures
+   it to shrink the card text until it fits. */
 .browser-print-preview {
-  display: none;
-  margin-top: 1rem;
-}
-
-.browser-print-preview-head h2 {
-  margin: 0 0 0.18rem;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.browser-print-preview-head p {
-  margin: 0 0 0.6rem;
-  color: var(--color-text-muted);
-  font-size: 0.84rem;
-}
-
-.browser-print-preview-head .browser-print-preview-note {
-  margin-top: -0.35rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.78rem;
-  font-weight: 600;
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ═══════════════════════════════════════════════════════════════
    Print Sheet (hardcoded for print fidelity — intentionally
    not themed)
+
+   One size for both Letter (8.5 x 11in) and A4 (8.27 x 11.69in):
+   6.75 x 9.2in fits either page even with the ~0.75in margins and
+   header/footer lines that iOS adds and won't let you turn off.
+   The rows share --rows-area, so 4, 5 or 6 cards always fill one
+   page; App sets --rows and shrinks the text with --fit-front
+   and --fit-back.
    ═══════════════════════════════════════════════════════════════ */
 
 .print-sheet {
+  --rows-area: 8.6in;
+  width: 6.75in;
   margin: 0 auto;
-  border: 1px solid var(--border-color-strong);
   background: #ffffff;
   color: #111111;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  padding: 0.26in;
-}
-
-.print-sheet-letter {
-  width: 8.5in;
-  min-height: 11in;
-}
-
-.print-sheet-a4 {
-  width: 210mm;
-  min-height: 297mm;
 }
 
 .print-sheet-meta {
@@ -59,15 +41,16 @@
   display: grid;
   grid-template-columns: 1.65fr 1fr;
   gap: 0.18in;
-  margin-bottom: 0.15in;
-  padding-bottom: 0.12in;
+  height: 0.5in;
+  margin-bottom: 0.1in;
   border-bottom: 1px solid #777777;
+  overflow: hidden;
 }
 
 .print-sheet-top-copy p {
-  margin: 0 0 0.08in;
-  font-size: 8.8pt;
-  line-height: 1.28;
+  margin: 0 0 0.02in;
+  font-size: 7.5pt;
+  line-height: 1.2;
 }
 
 .print-sheet-top-copy p:last-child {
@@ -76,13 +59,13 @@
 
 .print-sheet-top-guides {
   display: grid;
-  gap: 0.11in;
+  gap: 0.06in;
   align-content: start;
 }
 
 .print-guide-box {
   border: 1px dashed #666666;
-  min-height: 0.5in;
+  min-height: 0.17in;
   display: grid;
   place-items: center;
 }
@@ -92,35 +75,36 @@
 }
 
 .print-guide-label {
-  font-size: 8pt;
+  font-size: 6.5pt;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #444444;
 }
 
+/* Block, not grid: Safari ignores break-inside on grid items and
+   would cut a card in half at a page break. */
 .print-sheet-grid-official {
-  display: grid;
-  gap: 0;
+  display: block;
 }
 
 .print-sheet-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
+  height: calc(var(--rows-area) / var(--rows, 4));
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
 .print-face-card {
   border: 1px dashed #555555;
-  min-height: 1.78in;
   padding: 0.075in 0.085in;
   overflow: hidden;
 }
 
 .print-face-front h2 {
   margin: 0 0 0.045in;
-  font-size: 8.8pt;
+  font-size: calc(8.8pt * var(--fit-front, 1));
   line-height: 1.16;
 }
 
@@ -132,7 +116,7 @@
 }
 
 .print-face-front li {
-  font-size: 7.9pt;
+  font-size: calc(7.9pt * var(--fit-front, 1));
   line-height: 1.16;
 }
 
@@ -171,7 +155,7 @@
 
 .print-face-back p {
   margin: 0 0 0.032in;
-  font-size: 7.3pt;
+  font-size: calc(7.3pt * var(--fit-back, 1));
   line-height: 1.14;
 }
 
@@ -220,7 +204,7 @@
 
 @media print {
   @page {
-    margin: 0.22in;
+    margin: 0.5in;
   }
 
   .no-print {
@@ -228,8 +212,8 @@
   }
 
   .browser-print-preview {
-    display: block;
-    margin-top: 0;
+    position: static;
+    visibility: visible;
   }
 
   body {
@@ -239,16 +223,6 @@
 
   .print-sheet--color .print-face-card {
     color: var(--card-fg) !important;
-  }
-
-  .print-sheet {
-    border: none;
-    box-shadow: none;
-    margin: 0;
-    width: auto;
-    min-height: auto;
-    padding: 0.18in 0.2in 0.14in;
-    box-sizing: border-box;
   }
 
   .print-sheet-top {

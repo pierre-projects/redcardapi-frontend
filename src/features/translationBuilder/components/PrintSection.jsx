@@ -27,7 +27,7 @@ export default function PrintSection({ isValid, missing = [], onPrint, settings 
         </button>
         <p id={hintId} className="field-hint">
           {isValid
-            ? "In the print dialog, turn off headers and footers and set scale to 100%."
+            ? "In the print dialog, set scale to 100%."
             : `Fill in the required fields to print${missing.length ? `: ${missing.join(", ")}` : ""}.`}
         </p>
       </div>
