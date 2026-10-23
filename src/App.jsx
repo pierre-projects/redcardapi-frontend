@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLanguages } from "./hooks/useLanguages";
 import LanguagePicker from "./components/LanguagePicker";
 import LayoutPicker from "./components/LayoutPicker";
@@ -18,6 +18,7 @@ import { normalizeLanguageCode } from "./data/normalize";
 import { getBrowserLanguageTags, matchLanguageTag, matchPreferredLanguage } from "./lib/languageMatch";
 import { safeGet, safeRemove, safeSet } from "./lib/storage";
 import { DEFAULT_CARD_COLOR, normalizeHex, textColorFor } from "./lib/color";
+import { fitScale } from "./lib/printFit";
 import "./App.css";
 import "./print.css";
 
@@ -371,9 +372,6 @@ export default function App() {
       rows: Math.max(4, Math.ceil(effectiveCardsPerPage / 2)),
     };
   }, [builderCardsPerPage, effectiveCardsPerPage, page]);
-  const browserPageClass = (config?.page_size || "letter").toLowerCase() === "a4"
-    ? "print-sheet-a4"
-    : "print-sheet-letter";
   const browserPrintDirection = browserPrintCard?.rtl ? "rtl" : "ltr";
   const showRedcardsBrowserPrintSheet = (
     page === PAGE_REDCARDS &&
@@ -383,6 +381,32 @@ export default function App() {
   const showBuilderBrowserPrintSheet = page === PAGE_BUILDER && builderBrowserPrintReady;
   const showBrowserPrintSheet = showRedcardsBrowserPrintSheet || showBuilderBrowserPrintSheet;
   const backParagraphs = [...BACK_CONTENT.statements, BACK_CONTENT.footer].filter(Boolean);
+  const printSheetRef = useRef(null);
+
+  // Shrink each face's text until the first row fits; every row holds the same card.
+  useLayoutEffect(() => {
+    const sheet = printSheetRef.current;
+    if (!sheet) return undefined;
+    const fit = () => {
+      for (const side of ["front", "back"]) {
+        const face = sheet.querySelector(`.print-sheet-row:first-child .print-face-${side}`);
+        const property = `--fit-${side}`;
+        const scale = fitScale((candidate) => {
+          sheet.style.setProperty(property, String(candidate));
+          return face.scrollHeight <= face.clientHeight;
+        });
+        sheet.style.setProperty(property, String(scale));
+      }
+    };
+    fit();
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) fit();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showBrowserPrintSheet, browserPrintCard, browserLayout.rows]);
 
   const handleBrowserPrint = () => {
     window.print();
@@ -629,7 +653,7 @@ export default function App() {
                       Print
                     </button>
                     <p className="field-hint">
-                      In the print dialog, turn off headers and footers and set scale to 100%.
+                      In the print dialog, set scale to 100%.
                     </p>
                   </div>
                 ) : (
@@ -646,7 +670,7 @@ export default function App() {
                 <details className="disclosure">
                   <summary>Printing tips</summary>
                   <ul>
-                    <li>{pageSizeLabel} paper, portrait, scale 100% (not “fit to page”).</li>
+                    <li>{printMethod === "browser" ? "Letter or A4" : pageSizeLabel} paper, portrait, scale 100% (not “fit to page”).</li>
                     <li>Default or minimum margins.</li>
                     <li>Use heavy paper or card stock if you can.</li>
                     <li>Printing both sides: if the backs come out upside down, switch the flip edge.</li>
@@ -722,30 +746,20 @@ export default function App() {
       </footer>
 
       {showBrowserPrintSheet && browserPrintCard && (
-        <section className="browser-print-preview" aria-labelledby="print-sheet-title">
-          <div className="no-print browser-print-preview-head">
-            <h2 id="print-sheet-title">Browser Print Sheet Preview</h2>
-            <p>
-              {page === PAGE_BUILDER
-                ? "This sheet is generated directly from your builder form values."
-                : "This layout follows the official redcard fold format (front + back side-by-side)."}
-            </p>
-            <p className="browser-print-preview-note">
-              If page 1 shows only instructions, disable print headers/footers in the print dialog.
-            </p>
-          </div>
+        <section className="browser-print-preview" aria-label="Print sheet">
           <div
-            className={`print-sheet ${browserPageClass}${cardColors ? " print-sheet--color" : ""}`}
-            style={cardColors ? { "--card-bg": cardColors.background, "--card-fg": cardColors.text } : undefined}
+            ref={printSheetRef}
+            className={`print-sheet${cardColors ? " print-sheet--color" : ""}`}
+            style={{
+              "--rows": browserLayout.rows,
+              ...(cardColors && { "--card-bg": cardColors.background, "--card-fg": cardColors.text }),
+            }}
           >
             <div className="print-sheet-top">
               <div className="print-sheet-top-copy">
                 <p>
-                  To print at home, use heavy weight paper or card stock. Cut out the cards
-                  along the dotted lines.
-                </p>
-                <p>
-                  If you cannot print both sides, fold on the center line to make a two-sided card.
+                  Cut along the dotted lines, then fold each card on the center line.
+                  Heavy paper or card stock works best.
                 </p>
                 <p>
                   <strong>{browserPrintCard.name}</strong> ({browserPrintCard.code}) - {browserLayout.rows} cards per sheet ({browserLayout.rows} front + {browserLayout.rows} back)
