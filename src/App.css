@@ -842,6 +842,8 @@ button.icon-button {
   border-radius: var(--radius-card);
   font-size: calc(1.125rem * var(--card-text-scale));
   line-height: 1.55;
+  /* Vertical drags scroll; horizontal ones reach the swipe-to-switch handler. */
+  touch-action: pan-y;
 }
 
 .show-card-front {
@@ -853,6 +855,9 @@ button.icon-button {
   border: 1px solid var(--line-strong);
   background: #ffffff;
   color: #15181d;
+  /* Read by the officer at arm's length. */
+  font-size: calc(1.25rem * var(--card-text-scale));
+  line-height: 1.5;
 }
 
 .show-card-header {
@@ -888,6 +893,12 @@ button.icon-button {
 
 .toolbar-group {
   display: flex;
+}
+
+.toolbar-speak {
+  flex-basis: 100%;
+  min-height: 3.25rem;
+  font-weight: 600;
 }
 
 .toolbar-group button:first-child {
@@ -1012,6 +1023,61 @@ button.icon-button {
 
   .toolbar button:not(.icon-button) {
     flex: 1 1 auto;
+  }
+
+  /* Phones: the front/officer switch rides along the bottom edge, where the
+     thumb is, instead of scrolling away above the card. The DOM order (switch
+     before card) is unchanged for keyboards and screen readers. */
+  .show-page {
+    gap: 0.85rem;
+    padding-bottom: 0;
+  }
+
+  .show-page .segmented {
+    order: 1;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    /* auto top margin: on a short page the bar still sits at the bottom. */
+    margin: auto -1rem 0;
+    padding: 0.6rem max(0.75rem, env(safe-area-inset-left)) max(0.6rem, env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid var(--line-strong);
+    border-radius: 0;
+    background: var(--surface);
+    gap: 0.5rem;
+  }
+
+  .show-page .segmented button {
+    min-height: 3.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    /* Full-strength text: the side not shown is the next tap, not a disabled one. */
+    color: var(--ink);
+  }
+
+  .show-page .segmented button[aria-pressed="true"] {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--surface);
+    box-shadow: none;
+  }
+
+  .show-page .segmented button[aria-pressed="true"]:hover {
+    background: var(--ink);
+    color: var(--surface);
+  }
+
+  .show-page .segmented-main {
+    font-size: var(--text-lg);
+  }
+}
+
+/* 320px phones: keep "Show to officer" on one line. */
+@media (max-width: 359px) {
+  .show-page .segmented-main {
+    font-size: var(--text-md);
   }
 }
 
