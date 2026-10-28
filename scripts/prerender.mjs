@@ -10,6 +10,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeDataset } from "../src/data/normalize.js";
 import { getTranslator } from "../src/i18n/messages.js";
+import { machineNotice } from "../src/lib/translationSource.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
@@ -33,12 +34,16 @@ function cardMarkup(card) {
   const bullets = card.front.bullets.map((text) => `<li>${escapeHtml(text)}</li>`).join("");
   const backParagraphs = back.statements.map((text) => `<p>${escapeHtml(text)}</p>`).join("");
   const footer = back.footer ? `<p class="show-card-footer">${escapeHtml(back.footer)}</p>` : "";
+  const notice = machineNotice(card)
+    ? `<p class="notice machine-notice" role="note" lang="en" dir="ltr"><strong>${escapeHtml(machineNotice(card))}</strong></p>`
+    : "";
   return [
     `<div class="show-page">`,
     `<div class="show-topbar" lang="${t.lang}" dir="${uiDir}">`,
     `<a class="show-link-button" href="/">${uiDir === "rtl" ? "→" : "←"} ${escapeHtml(t("allLanguages"))}</a>`,
     `<a class="button button-quiet show-print" href="/redcards/${escapeHtml(card.code)}">${escapeHtml(t("print"))}</a>`,
     `</div>`,
+    notice,
     `<article class="show-card show-card-front" lang="${escapeHtml(card.code)}" dir="${dir}">`,
     `<h1 class="show-card-header">${escapeHtml(card.front.header || card.native)}</h1>`,
     `<ul class="show-card-bullets">${bullets}</ul>`,

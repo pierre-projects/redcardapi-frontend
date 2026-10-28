@@ -37,7 +37,8 @@ describe("home", () => {
   it("searches in the language's own script", () => {
     renderAt("/");
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "العربية" } });
-    expect(screen.getByRole("link", { name: /العربية/ })).toHaveAttribute("href", "/card/ar");
+    const hrefs = screen.getAllByRole("link", { name: /العربية/ }).map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual(["/card/ar", "/card/apd"]);
   });
 
   it("reports an unknown card code instead of a blank page", () => {

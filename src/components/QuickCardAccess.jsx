@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { getTranslator } from "../i18n/messages";
 import { searchLanguages } from "../lib/languageMatch";
+import { isMachineTranslation } from "../lib/translationSource";
 import Icon from "./Icon";
 
 /**
@@ -87,8 +88,13 @@ export default function QuickCardAccess({ languages, suggested, onOpenCard, onFo
                 <span className="language-native" lang={language.code} dir={language.rtl ? "rtl" : "ltr"}>
                   {language.native}
                 </span>
-                {language.native !== language.name && (
-                  <span className="language-name">{language.name}</span>
+                {(language.native !== language.name || isMachineTranslation(language)) && (
+                  <span className="language-name">
+                    {language.native !== language.name && language.name}
+                    {isMachineTranslation(language) && (
+                      <span className="language-tag">Machine translation</span>
+                    )}
+                  </span>
                 )}
               </a>
             </li>

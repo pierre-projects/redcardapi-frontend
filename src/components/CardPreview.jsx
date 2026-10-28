@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { machineNotice } from "../lib/translationSource";
 import Icon from "./Icon";
 
 /**
@@ -41,7 +42,7 @@ export default function CardPreview({ card, back, onShowCard, colors = null }) {
       {card.source && !card.source.verified && (
         <div className="notice" role="note">
           <span>
-            <strong>Not yet reviewed by a native speaker.</strong>{" "}
+            <strong>{machineNotice(card) || "Not yet reviewed by a native speaker."}</strong>{" "}
             {card.source.review_note || "Check the text before printing many copies."}
           </span>
         </div>
@@ -80,6 +81,9 @@ export default function CardPreview({ card, back, onShowCard, colors = null }) {
               ) : (
                 <p className="preview-card-empty">No bullet content found.</p>
               )}
+              {machineNotice(card) && (
+                <p className="preview-card-notice" lang="en" dir="ltr">{machineNotice(card)}</p>
+              )}
             </article>
 
             <article
@@ -109,6 +113,12 @@ export default function CardPreview({ card, back, onShowCard, colors = null }) {
             <span className="preview-source-value">{card.source.type}</span>
             {card.source.origin && card.source.origin !== "unknown" && (
               <span> - {card.source.origin}</span>
+            )}
+            {card.source.engine && (
+              <span>
+                {" "}- {card.source.engine}
+                {card.source.translated_on ? `, ${card.source.translated_on}` : ""}
+              </span>
             )}
             {card.source.verified && <span> - verified</span>}
             {card.source.url && (

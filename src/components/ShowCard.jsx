@@ -5,6 +5,7 @@ import { useSpeech } from "../hooks/useSpeech";
 import { useOfflineReady } from "../hooks/useOfflineReady";
 import { saveCardImage } from "../lib/cardImage";
 import { safeGet, safeSet } from "../lib/storage";
+import { machineNotice, sourceDescription } from "../lib/translationSource";
 import Icon from "./Icon";
 
 const TEXT_SCALE_KEY = "card-text-scale";
@@ -33,6 +34,7 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
   const headingRef = useRef(null);
 
   const isBack = side === "back";
+  const notice = machineNotice(card);
   const screenOn = useWakeLock(true);
   const offlineReady = useOfflineReady();
   const speech = useSpeech(isBack ? "en" : card.code);
@@ -179,6 +181,14 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
         <p className="show-officer-hint" lang={t.lang} dir={uiDir}>{t("officerHint")}</p>
       )}
 
+      {notice && !isBack && (
+        <p className="notice machine-notice" role="note" lang="en" dir="ltr">
+          <span>
+            <strong>{notice}</strong> The English side for the officer is unchanged.
+          </span>
+        </p>
+      )}
+
       {isBack ? (
         <article className="show-card show-card-back" lang="en" dir="ltr">
           <h1 ref={headingRef} tabIndex={-1} className="visually-hidden">
@@ -250,9 +260,8 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
       <details className="disclosure show-about">
         <summary>About this translation</summary>
         <p>
-          {card.name} ({card.native})
-          {card.source?.origin && card.source.origin !== "unknown" ? `, from ${card.source.origin}` : ""}
-          {card.source?.verified ? ", verified" : ""}.
+          {card.name} ({card.native}). {sourceDescription(card)}
+          {card.source?.verified ? " Checked by a native speaker." : ""}
           {card.source?.url && (
             <>
               {" "}

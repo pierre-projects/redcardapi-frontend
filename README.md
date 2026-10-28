@@ -42,6 +42,7 @@ Captured from a production build at phone width (390 px) and on desktop. Individ
 - **Browser language:** `navigator.languages` is matched with region and script fallbacks and aliases, for example `es-MX→es`, `zh-Hant-HK→zh-tw`, `fa-AF→prs`, `fil→tl`.
 - **Text direction:** right-to-left cards set `lang` and `dir` on the card and on `<html>` while shown.
 - **Fonts:** Noto fonts for scripts that many phones lack are self-hosted from `@fontsource` packages (`src/fonts.css`): Ethiopic, Myanmar/Karen, Khmer, Lao, Arabic, Hebrew, Indic, Thai, Armenian and Georgian. Each font face has a `unicode-range`, so a device downloads a font only when a card uses that script. The service worker then caches it.
+- **Translation sources:** every card has a `source.type`: `official` (ILRC), `machine` (a translation app's output of the English text, with `engine` and `translated_on`) or `community`. Machine translations show a notice above the card, on saved images and printed cards, and in the language lists (`src/lib/translationSource.js`). The wording matches the backend's PDF notice. To add one, see the backend's CONTRIBUTING.md.
 - **Interface text:** the card-view controls are translated for es, fr, pt, ht, zh-cn, zh-tw, vi, ar, ru, uk, ko and tl (`src/i18n/messages.js`). Other languages fall back to English. **These strings were drafted without native-speaker review. Have each language checked.**
 
 ## Getting Started

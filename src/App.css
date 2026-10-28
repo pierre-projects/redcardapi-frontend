@@ -451,6 +451,16 @@ button.icon-button {
   text-align: end;
 }
 
+.language-tag {
+  display: block;
+  color: var(--warn);
+  font-size: var(--text-xs);
+}
+
+.machine-notice {
+  margin: 0 0 0.75rem;
+}
+
 .about {
   margin-top: 3.5rem;
   padding-top: 2rem;
@@ -678,6 +688,13 @@ button.icon-button {
 .preview-card-header {
   font-size: var(--text-lg);
   margin-bottom: 0.6rem;
+}
+
+.preview-card-notice {
+  margin: 0.75rem 0 0;
+  font-size: var(--text-xs);
+  font-style: italic;
+  text-align: left;
 }
 
 .preview-card-bullets {
