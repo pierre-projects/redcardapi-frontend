@@ -21,6 +21,8 @@ describe("matchLanguageTag", () => {
     ["zh-Hant-HK", "zh-tw"],
     ["zh-HK", "zh-tw"],
     ["fa-AF", "prs"],
+    ["ar-SD", "apd"],
+    ["in-ID", "id"],
     ["fa-IR", "fa"],
     ["fil-PH", "tl"],
     ["iw", "he"],

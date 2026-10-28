@@ -19,6 +19,7 @@ import { getBrowserLanguageTags, matchLanguageTag, matchPreferredLanguage } from
 import { safeGet, safeRemove, safeSet } from "./lib/storage";
 import { DEFAULT_CARD_COLOR, normalizeHex, textColorFor } from "./lib/color";
 import { fitScale } from "./lib/printFit";
+import { machineNotice } from "./lib/translationSource";
 import "./App.css";
 import "./print.css";
 
@@ -788,6 +789,11 @@ export default function App() {
                         <li key={`f-${rowIdx}-${bulletIdx}`}>{bullet}</li>
                       ))}
                     </ul>
+                    {machineNotice(browserPrintCard) && (
+                      <p className="print-face-notice" lang="en" dir="ltr">
+                        {machineNotice(browserPrintCard)}
+                      </p>
+                    )}
                   </article>
                   <article
                     className="print-face-card print-face-back"

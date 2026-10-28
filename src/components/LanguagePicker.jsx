@@ -225,6 +225,9 @@ export default function LanguagePicker({ languages, value, onChange }) {
                       {l.native}
                     </span>
                     {l.native !== l.name && <span className="picker-option-name">{l.name}</span>}
+                    {l.source?.type === "machine" && (
+                      <span className="picker-option-note">Machine translation</span>
+                    )}
                     {l.fontSupported === false && (
                       <span className="picker-option-note">PDF unavailable · browser print works</span>
                     )}

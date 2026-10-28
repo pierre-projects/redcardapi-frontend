@@ -3,6 +3,8 @@
  * be shown with no browser, app or connection at all.
  */
 
+import { machineNotice } from "./translationSource";
+
 const WIDTH = 1080;
 const PAD = 72;
 const FRONT_BG = "#B91C1C";
@@ -97,6 +99,10 @@ export async function renderCardImage(card, back) {
     ...card.front.bullets.map((text) => ({
       text, size: 38, lang: card.code, bullet: true, gapBefore: 18,
     })),
+    // A saved image travels without the app, so it carries the notice too.
+    ...(machineNotice(card)
+      ? [{ text: machineNotice(card), size: 28, lang: "en", italic: true, gapBefore: 30 }]
+      : []),
   ];
   const backBlocks = [
     ...back.statements.map((text, index) => ({
@@ -128,7 +134,7 @@ export async function renderCardImage(card, back) {
 
 /** Text alternative for the card image: everything the picture says. */
 export function cardImageAlt(card, back) {
-  const front = [card.front.header, ...card.front.bullets].filter(Boolean).join(" ");
+  const front = [card.front.header, ...card.front.bullets, machineNotice(card)].filter(Boolean).join(" ");
   const officer = [...back.statements, back.footer].filter(Boolean).join(" ");
   return `Red Card in ${card.name}. Front (${card.name}): ${front} Back (English, for the officer): ${officer}`;
 }

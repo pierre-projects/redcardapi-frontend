@@ -15,6 +15,8 @@ const ALIASES = {
   "yue-hk": "yue",
   "yue-hant": "yue",
   "fa-af": "prs",
+  "ar-sd": "apd",
+  in: "id",
   fil: "tl",
   iw: "he",
   "pt-cv": "kea",

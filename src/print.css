@@ -120,6 +120,16 @@
   line-height: 1.16;
 }
 
+/* English, so a cut-out machine-translated card still says what it is.
+   Inside the face, so the print fit shrinks the text to make room for it. */
+.print-face-notice {
+  margin: 0.04in 0 0;
+  font-size: calc(6.3pt * var(--fit-front, 1));
+  font-style: italic;
+  line-height: 1.14;
+  text-align: left;
+}
+
 .print-face-front[dir="rtl"] {
   text-align: right;
 }

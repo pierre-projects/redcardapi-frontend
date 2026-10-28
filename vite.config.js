@@ -67,7 +67,7 @@ export default defineConfig(({ command, mode }) => {
         manifest: {
           name: 'Red Card — Know Your Rights',
           short_name: 'Red Card',
-          description: 'Know-your-rights Red Cards in 56 languages, available offline.',
+          description: 'Know-your-rights Red Cards in 59 languages, available offline.',
           start_url: '/',
           scope: '/',
           display: 'standalone',
