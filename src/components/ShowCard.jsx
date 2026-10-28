@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getTranslator } from "../i18n/messages";
 import { useWakeLock } from "../hooks/useWakeLock";
 import { useSpeech } from "../hooks/useSpeech";
@@ -9,6 +9,9 @@ import { machineNotice, sourceDescription } from "../lib/translationSource";
 import Icon from "./Icon";
 
 const TEXT_SCALE_KEY = "card-text-scale";
+// A horizontal swipe on the card switches sides once it travels this far and
+// is clearly more sideways than vertical (so scrolling never flips the card).
+const SWIPE_MIN_PX = 60;
 const TEXT_SCALES = [0.85, 1, 1.15, 1.3, 1.5, 1.75];
 const RTL_UI_LANGS = new Set(["ar", "fa", "prs", "he", "ps", "ur"]);
 
@@ -32,6 +35,8 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
   const [saving, setSaving] = useState(false);
   const pageRef = useRef(null);
   const headingRef = useRef(null);
+  const swipeRef = useRef(null);
+  const switchedRef = useRef(false);
 
   const isBack = side === "back";
   const notice = machineNotice(card);
@@ -69,6 +74,43 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
     const timer = setTimeout(() => setToast(""), 2500);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  const showSide = (next) => {
+    if (next === side) return;
+    switchedRef.current = true;
+    setSide(next);
+  };
+
+  // Each side starts at its top: the officer should never get the English
+  // side halfway down because the front had been scrolled. An instant jump,
+  // after the new side has rendered, so it lands even mid-scroll.
+  useLayoutEffect(() => {
+    if (!switchedRef.current) return;
+    switchedRef.current = false;
+    const page = pageRef.current;
+    if (!page) return;
+    if (isFullscreen) {
+      page.scrollTop = 0;
+    } else if (page.getBoundingClientRect().top < 0) {
+      window.scrollTo(0, page.getBoundingClientRect().top + window.scrollY);
+    }
+  }, [side, isFullscreen]);
+
+  const onCardPointerDown = (event) => {
+    if (event.pointerType !== "touch") return;
+    swipeRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const onCardPointerUp = (event) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) >= SWIPE_MIN_PX && Math.abs(dx) > 2 * Math.abs(dy)) {
+      showSide(isBack ? "front" : "back");
+    }
+  };
 
   const changeScale = (delta) => {
     setScaleIndex((current) => {
@@ -167,11 +209,11 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
       </div>
 
       <div className="segmented" role="group" aria-label={card.native} lang={t.lang} dir={uiDir}>
-        <button type="button" aria-pressed={!isBack} onClick={() => setSide("front")}>
+        <button type="button" aria-pressed={!isBack} onClick={() => showSide("front")}>
           <span className="segmented-main">{t("myRights")}</span>
           <span className="segmented-sub" lang={card.code}>{card.native}</span>
         </button>
-        <button type="button" aria-pressed={isBack} onClick={() => setSide("back")}>
+        <button type="button" aria-pressed={isBack} onClick={() => showSide("back")}>
           <span className="segmented-main">{t("showOfficer")}</span>
           <span className="segmented-sub" lang="en">English</span>
         </button>
@@ -190,7 +232,14 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
       )}
 
       {isBack ? (
-        <article className="show-card show-card-back" lang="en" dir="ltr">
+        <article
+          className="show-card show-card-back"
+          lang="en"
+          dir="ltr"
+          onPointerDown={onCardPointerDown}
+          onPointerUp={onCardPointerUp}
+          onPointerCancel={() => (swipeRef.current = null)}
+        >
           <h1 ref={headingRef} tabIndex={-1} className="visually-hidden">
             Know your rights — statement for the officer
           </h1>
@@ -200,7 +249,14 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
           {back.footer && <p className="show-card-footer">{back.footer}</p>}
         </article>
       ) : (
-        <article className="show-card show-card-front" lang={card.code} dir={card.rtl ? "rtl" : "ltr"}>
+        <article
+          className="show-card show-card-front"
+          lang={card.code}
+          dir={card.rtl ? "rtl" : "ltr"}
+          onPointerDown={onCardPointerDown}
+          onPointerUp={onCardPointerUp}
+          onPointerCancel={() => (swipeRef.current = null)}
+        >
           <h1 ref={headingRef} tabIndex={-1} className="show-card-header">
             {card.front.header || card.native}
           </h1>
@@ -213,6 +269,18 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
       )}
 
       <div className="toolbar" lang={t.lang} dir={uiDir}>
+        {/* First and full width: listening is the way in for people who can't read the card. */}
+        {speech.canSpeak && (
+          <button
+            type="button"
+            className="toolbar-speak"
+            onClick={handleSpeak}
+            aria-pressed={speech.speaking}
+          >
+            <Icon name={speech.speaking ? "stop" : "volume"} />
+            {speech.speaking ? t("stop") : t("readAloud")}
+          </button>
+        )}
         <div className="toolbar-group" role="group" aria-label={t("textSize")}>
           <button
             type="button"
@@ -247,12 +315,6 @@ export default function ShowCard({ card, back, onAllLanguages, onPrint, printHre
           <Icon name="share" />
           {t("share")}
         </button>
-        {speech.canSpeak && (
-          <button type="button" onClick={handleSpeak} aria-pressed={speech.speaking}>
-            <Icon name={speech.speaking ? "stop" : "volume"} />
-            {speech.speaking ? t("stop") : t("readAloud")}
-          </button>
-        )}
       </div>
 
       <div className="toast" role="status" hidden={!toast}>{toast}</div>
